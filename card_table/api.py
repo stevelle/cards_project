@@ -1,13 +1,16 @@
+import json
+
 import falcon
 
 from falcon_autocrud.resource import CollectionResource, SingleResource
+from sqlalchemy import bindparam, select
 
 from card_table.storage import Game
 
 
 def create_api(middleware, db_engine):
     app = falcon.API(middleware=middleware)
-    app.add_route('/health', HealthResource())
+    app.add_route('/health', HealthResource(db_engine))
     app.add_route('/games', GameCollectionResource(db_engine))
     app.add_route('/games/{id}', GameResource(db_engine))
     return app
@@ -15,11 +18,34 @@ def create_api(middleware, db_engine):
 
 class HealthResource(object):
 
-    @staticmethod
-    def on_get(req, resp):
+    statement = select([Game.__table__]).where(Game.id == bindparam('id'))
+    error_txt = 'Service failed health check'
+    ok_txt = json.dumps({'title': '200 OK',
+                         'description': 'Service passed health check'})
+
+    def __init__(self, db_engine):
+        self.db_engine = db_engine
+        self.compiled_cache = {}
+
+    def on_get(self, req, resp):
         # PoC: always OK
-        resp.status = falcon.HTTP_200
-        resp.body = '{"status": "ok"}'
+        if self.is_db_available():
+            resp.status = falcon.HTTP_200
+            resp.body = self.ok_txt
+        else:
+            raise falcon.HTTPServiceUnavailable(description=self.error_txt,
+                                                retry_after=60)
+
+    def is_db_available(self):
+        func = self.db_engine.connect
+        cache = self.compiled_cache
+        try:
+            with (func().execution_options(compiled_cache=cache)) as conn:
+                conn.execute(self.statement, id=1).first()
+            return True
+
+        except Exception:
+            return False
 
 
 class GameCollectionResource(CollectionResource):
