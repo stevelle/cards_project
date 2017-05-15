@@ -1,1 +1,6 @@
 falcon==1.1.0
+falcon-autocrud==1.0.31
+SQLAlchemy==1.1.9
+
+# TODO for py2 support
+# enum==0.4.6
