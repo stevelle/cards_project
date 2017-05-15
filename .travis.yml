@@ -1,0 +1,27 @@
+language: python
+
+cache:
+  directories:
+  - $HOME/.cache/pip
+
+install:
+  - 'pip install -r requirements.txt'
+  - 'pip install -r test-requirements.txt'
+
+script:
+  - 'flake8 --ignore=F403 .'
+  - 'py.test test'
+
+matrix:
+  include:
+    - python: '2.7'
+    - python: '3.5'
+    - python: '3.6'
+
+notifications:
+  email: false
+
+git:
+  depth: 3
+
+sudo: false
