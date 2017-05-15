@@ -16,7 +16,7 @@ related plugins are featured.
  - Some consideration is given to a Service Oriented Architecture (SOA), and some
    to the model of Microservices.
  - The project is organized as a [monorepo](https://danluu.com/monorepo/).
-   Sub-projects contained in this repo are each [listed below](#Sub-projects).
+   Sub-projects contained in this repo are each [listed below](README.md/#sub-projects).
 
 ## Deploying
 This project is just getting started. There is no deployment support, no model
