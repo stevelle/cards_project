@@ -2,6 +2,7 @@ import datetime as dt
 import enum
 
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import bindparam, select
 from sqlalchemy import Column, DateTime, Integer, String, Enum
 
 Base = declarative_base()
@@ -29,3 +30,22 @@ class Game(Base):
 
 def sync(engine):
     Base.metadata.create_all(engine)
+
+
+def db_verifier(db_engine):
+
+    _statement = select([Game.__table__]).where(Game.id == bindparam('id'))
+    _compiled_cache = {}
+
+    def is_available():
+        func = db_engine.connect
+        cache = _compiled_cache
+        try:
+            with (func().execution_options(compiled_cache=cache)) as conn:
+                conn.execute(_statement, id=1).first()
+            return True
+
+        except Exception:
+            return False
+
+    return is_available

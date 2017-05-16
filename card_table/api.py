@@ -3,9 +3,8 @@ import json
 import falcon
 
 from falcon_autocrud.resource import CollectionResource, SingleResource
-from sqlalchemy import bindparam, select
 
-from card_table.storage import Game
+from card_table.storage import db_verifier, Game
 
 
 def create_api(middleware, db_engine):
@@ -18,14 +17,12 @@ def create_api(middleware, db_engine):
 
 class HealthResource(object):
 
-    statement = select([Game.__table__]).where(Game.id == bindparam('id'))
     error_txt = 'Service failed health check'
     ok_txt = json.dumps({'title': '200 OK',
                          'description': 'Service passed health check'})
 
     def __init__(self, db_engine):
-        self.db_engine = db_engine
-        self.compiled_cache = {}
+        self.is_db_available = db_verifier(db_engine)
 
     def on_get(self, req, resp):
         # PoC: always OK
@@ -35,17 +32,6 @@ class HealthResource(object):
         else:
             raise falcon.HTTPServiceUnavailable(description=self.error_txt,
                                                 retry_after=60)
-
-    def is_db_available(self):
-        func = self.db_engine.connect
-        cache = self.compiled_cache
-        try:
-            with (func().execution_options(compiled_cache=cache)) as conn:
-                conn.execute(self.statement, id=1).first()
-            return True
-
-        except Exception:
-            return False
 
 
 class GameCollectionResource(CollectionResource):
