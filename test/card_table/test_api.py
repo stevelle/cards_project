@@ -37,10 +37,18 @@ def games_api(app):
 
 class TestApiHealth(object):
 
-    def test_get_health(self, client):
+    def test_get_health_ok(self, client):
         resp = client.get('/health')
         assert resp.status == falcon.HTTP_OK
-        assert resp.json['status'] == 'ok'
+        assert resp.json['title'] == falcon.HTTP_OK
+
+    def test_get_health_failure(self, engine, client):
+        from card_table.storage import Base
+        Base.metadata.drop_all(engine)
+        resp = client.get('/health')
+        assert resp.status == falcon.HTTP_SERVICE_UNAVAILABLE
+        assert resp.json['title'] == falcon.HTTP_SERVICE_UNAVAILABLE
+        assert resp.json['description'] == 'Service failed health check'
 
     def test_put_health(self, client):
         resp = client.put('/health', {'foo': 'bar'})
