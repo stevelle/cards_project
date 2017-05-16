@@ -1,11 +1,13 @@
 import datetime as dt
 import enum
 
+import logging
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import bindparam, select
 from sqlalchemy import Column, DateTime, Integer, String, Enum
 
 Base = declarative_base()
+LOG = logging.getLogger(__name__)
 
 
 class GameState(enum.Enum):
@@ -45,7 +47,8 @@ def db_verifier(db_engine):
                 conn.execute(_statement, id=1).first()
             return True
 
-        except Exception:
+        except Exception as e:
+            LOG.error('Failure at DB during health check {}'.format(str(e)))
             return False
 
     return is_available
