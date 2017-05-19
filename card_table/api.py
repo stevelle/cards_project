@@ -4,7 +4,7 @@ import falcon
 
 from falcon_autocrud.resource import CollectionResource, SingleResource
 
-from card_table.storage import db_verifier, Game
+from card_table.storage import db_verifier, Game, Stack
 
 
 def create_api(middleware, db_engine):
@@ -12,6 +12,8 @@ def create_api(middleware, db_engine):
     app.add_route('/health', HealthResource(db_engine))
     app.add_route('/games', GameCollectionResource(db_engine))
     app.add_route('/games/{id}', GameResource(db_engine))
+    app.add_route('/stacks', StackCollectionResource(db_engine))
+    app.add_route('/stacks/{id}', StackResource(db_engine))
     return app
 
 
@@ -34,6 +36,14 @@ class HealthResource(object):
                                                 retry_after=60)
 
 
+class RestResource(SingleResource):
+    """ Convenience class that fixes up behavior of DELETE requests """
+    @staticmethod
+    def after_delete(req, resp, item, *args, **kwargs):
+        resp.status = falcon.HTTP_NO_CONTENT
+        req.context['result'] = None
+
+
 class GameCollectionResource(CollectionResource):
     model = Game
 
@@ -50,7 +60,7 @@ class GameCollectionResource(CollectionResource):
         handle_result_enums(req.context['result'])
 
 
-class GameResource(SingleResource):
+class GameResource(RestResource):
     model = Game
 
     @staticmethod
@@ -61,10 +71,13 @@ class GameResource(SingleResource):
     def after_patch(req, resp, *args, **kwargs):
         handle_result_enums(req.context['result'])
 
-    @staticmethod
-    def after_delete(req, resp, item, *args, **kwargs):
-        resp.status = falcon.HTTP_NO_CONTENT
-        req.context['result'] = None
+
+class StackCollectionResource(CollectionResource):
+    model = Stack
+
+
+class StackResource(RestResource):
+    model = Stack
 
 
 ##########
