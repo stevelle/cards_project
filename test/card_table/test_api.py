@@ -1,10 +1,9 @@
 import falcon
 import pytest
-
 from falcon_autocrud.middleware import Middleware
 from sqlalchemy.orm import sessionmaker
 
-from card_table import api, storage, HAND, DISCARDS, IN_PLAY
+from card_table import api, storage, HAND, IN_PLAY
 from test.card_table import test_db_engine, fixtures, FakeClient
 
 
@@ -137,16 +136,6 @@ class TestApiGame(object):
 
 
 class TestApiStack(object):
-    # import falcon
-    # import pytest
-    #
-    # from falcon_autocrud.middleware import Middleware
-    # from sqlalchemy.orm import sessionmaker
-    #
-    # from cards import api
-    # from cards import storage
-    # from cards.tests import unit
-    #
     def test_get_all(self, rest_api, with_fixtures):
         resp = rest_api.get('/stacks')
 
@@ -185,20 +174,21 @@ class TestApiStack(object):
         assert resp.json['owner_id'] == 300
         assert resp.json['label'] == HAND
 
-    def test_patch_by_id(self, rest_api):
-        # TODO refactor to get rid of post
-        self.test_post(rest_api)
-        data = {"label": "discards"}
-        resp = rest_api.patch('/stacks/1', data)
+    def test_patch_by_id(self, rest_api, with_fixtures):
+        data = {"size_limit": 5}
+        resp = rest_api.patch('/stacks/5', data)
 
         assert resp.status == falcon.HTTP_OK
-        assert resp.json['id'] == 1
-        assert resp.json['owner_id'] == 300
-        assert resp.json['label'] == DISCARDS
+        assert resp.json['id'] == 5
+        assert resp.json['owner_id'] == 200
+        assert resp.json['label'] == HAND
+        assert resp.json['size_limit'] == 5
 
-    def test_delete(self, rest_api):
-        # TODO refactor to get rid of post
-        self.test_post(rest_api)
-        resp = rest_api.delete('/stacks/1')
+    def test_delete(self, rest_api, with_fixtures):
+        resp = rest_api.delete('/stacks/' + str(len(fixtures.stacks)))
 
         assert resp.status == falcon.HTTP_NO_CONTENT
+        remaining = rest_api.get('/stacks')
+        assert remaining.status == falcon.HTTP_OK
+        assert len(remaining.json) == len(fixtures.stacks) - 1
+
