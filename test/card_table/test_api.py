@@ -5,6 +5,8 @@ from falcon_autocrud.middleware import Middleware
 from sqlalchemy.orm import sessionmaker
 
 from card_table import api, storage, HAND, DISCARDS, IN_PLAY
+from card_table.cards import DIAMONDS, SPADES, SIX
+from card_table.storage import Facing
 from test.card_table import test_db_engine, fixtures, FakeClient
 
 
@@ -31,6 +33,9 @@ def with_fixtures(engine):
 
     for model in fixtures.stacks:
         session.add(storage.Stack(**model))
+
+    for model in fixtures.cards:
+        session.add(storage.Card(**model))
 
     session.commit()
 
@@ -200,5 +205,71 @@ class TestApiStack(object):
         # TODO refactor to get rid of post
         self.test_post(rest_api)
         resp = rest_api.delete('/stacks/1')
+
+        assert resp.status == falcon.HTTP_NO_CONTENT
+
+
+class TestApiCards(object):
+    def test_get_all(self, rest_api, with_fixtures):
+        resp = rest_api.get('/cards')
+
+        assert resp.status == falcon.HTTP_OK
+        assert len(resp.json) == len(fixtures.cards)
+        assert resp.json[0]['id'] == 1
+
+    def test_get_by_id(self, rest_api, with_fixtures):
+        resp = rest_api.get('/cards/3')
+
+        assert resp.status == falcon.HTTP_OK
+        assert resp.json['id'] == 3
+        assert resp.json['rank_value'] == 8
+        assert resp.json['suit_value'] == DIAMONDS
+        assert resp.json['owner_facing'] == Facing.up.name
+        assert resp.json['other_facing'] == Facing.down.name
+
+    def test_get_by_stack_id(self, rest_api, with_fixtures):
+        resp = rest_api.get('/cards?stack_id=2&__sort=position')
+
+        assert resp.status == falcon.HTTP_OK
+        assert len(resp.json) == 5
+        assert resp.json[0]['stack_id'] == 2
+        assert resp.json[0]['position'] == 0
+        assert resp.json[1]['stack_id'] == 2
+        assert resp.json[1]['position'] == 1
+        assert resp.json[2]['stack_id'] == 2
+        assert resp.json[2]['position'] == 2
+
+    def test_get_missing_by_id(self, rest_api, with_fixtures):
+        resp = rest_api.get('/cards/80')
+
+        assert resp.status == falcon.HTTP_NOT_FOUND
+
+    def test_post(self, rest_api):
+
+        data = {'stack_id': 1, 'position': 2, 'suit': '♠',
+                'suit_value': SPADES, 'rank': SIX, 'rank_value': 6}
+        resp = rest_api.post('/cards', data)
+
+        assert resp.status == falcon.HTTP_CREATED
+        assert resp.json['id'] == 1
+        assert resp.json['stack_id'] == 1
+        assert resp.json['position'] == 2
+        assert resp.json['suit'] == '♠'
+        assert resp.json['suit_value'] == SPADES
+        assert resp.json['rank'] == SIX
+        assert resp.json['rank_value'] == 6
+        assert resp.json['owner_facing'] == Facing.down.name
+        assert resp.json['other_facing'] == Facing.down.name
+
+    def test_patch_by_id(self, rest_api, with_fixtures):
+        data = {"owner_facing": "peeking"}
+        resp = rest_api.patch('/cards/1', data)
+
+        assert resp.status == falcon.HTTP_OK
+        assert resp.json['id'] == 1
+        assert resp.json['owner_facing'] == 'peeking'
+
+    def test_delete(self, rest_api, with_fixtures):
+        resp = rest_api.delete('/cards/1')
 
         assert resp.status == falcon.HTTP_NO_CONTENT

@@ -1,0 +1,37 @@
+ACE = 'ace'
+TWO = '2'
+THREE = '3'
+FOUR = '4'
+FIVE = '5'
+SIX = '6'
+SEVEN = '7'
+EIGHT = '8'
+NINE = '9'
+TEN = '10'
+JACK = 'jack'
+QUEEN = 'queen'
+KING = 'king'
+JOKER = 'joker'
+
+COMMON_RANKS_LIST_ACE_LOW = [ACE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT,
+                             NINE, TEN, JACK, QUEEN, KING]
+COMMON_RANKS_LIST_ACE_HIGH = [TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE,
+                              TEN, JACK, QUEEN, KING, ACE]
+COMMON_RANKS_ACE_LOW = dict(zip(range(1, 13), COMMON_RANKS_LIST_ACE_LOW))
+COMMON_RANKS_ACE_HIGH = dict(zip(range(2, 14), COMMON_RANKS_LIST_ACE_HIGH))
+
+CLUBS = 'clubs'
+DIAMONDS = 'diamonds'
+HEARTS = 'hearts'
+SPADES = 'spades'
+
+COMMON_SUIT_NAMES_LIST = [CLUBS, DIAMONDS, HEARTS, SPADES]
+
+CLUB = '♣'
+DIAMOND = '♢'
+HEART = '♡'
+SPADE = '♠'
+
+COMMON_SUITS_LIST = [CLUB, DIAMOND, HEART, SPADE]
+COMMON_SUITS = dict(zip(COMMON_SUITS_LIST, COMMON_SUIT_NAMES_LIST))
+
