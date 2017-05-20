@@ -1,10 +1,9 @@
 import falcon
 import pytest
-
 from falcon_autocrud.middleware import Middleware
 from sqlalchemy.orm import sessionmaker
 
-from card_table import api, storage
+from card_table import api, storage, HAND, IN_PLAY
 from test.card_table import test_db_engine, fixtures, FakeClient
 
 
@@ -23,15 +22,20 @@ def app(engine):
 
 @pytest.fixture()
 def with_fixtures(engine):
-    Session = sessionmaker(bind=engine)
-    session = Session()
+    sessions = sessionmaker(bind=engine)
+    session = sessions()
+
     for model in fixtures.games:
         session.add(storage.Game(**model))
+
+    for model in fixtures.stacks:
+        session.add(storage.Stack(**model))
+
     session.commit()
 
 
 @pytest.fixture()
-def games_api(app):
+def rest_api(app):
     return FakeClient(app)
 
 
@@ -74,23 +78,23 @@ class TestApiHealth(object):
 
 
 class TestApiGame(object):
-    def test_get_all(self, games_api, with_fixtures):
-        resp = games_api.get('/games')
+    def test_get_all(self, rest_api, with_fixtures):
+        resp = rest_api.get('/games')
 
         assert resp.status == falcon.HTTP_OK
         assert len(resp.json) == len(fixtures.games)
         assert resp.json[0]['id'] == 1
 
-    def test_get_by_id(self, games_api, with_fixtures):
-        resp = games_api.get('/games/3')
+    def test_get_by_id(self, rest_api, with_fixtures):
+        resp = rest_api.get('/games/3')
 
         assert resp.status == falcon.HTTP_OK
         assert resp.json['id'] == 3
         assert resp.json['name'] == 'cancelled'
         assert resp.json['state'] == 'cancelled'
 
-    def test_get_by_state(self, games_api, with_fixtures):
-        resp = games_api.get('/games?state=playing')
+    def test_get_by_state(self, rest_api, with_fixtures):
+        resp = rest_api.get('/games?state=playing')
 
         assert resp.status == falcon.HTTP_OK
         assert len(resp.json) == 1
@@ -99,33 +103,91 @@ class TestApiGame(object):
         assert matched['name'] == 'playing'
         assert matched['state'] == 'playing'
 
-    def test_get_missing_by_id(self, games_api, with_fixtures):
-        resp = games_api.get('/games/80')
+    def test_get_missing_by_id(self, rest_api, with_fixtures):
+        resp = rest_api.get('/games/80')
 
         assert resp.status == falcon.HTTP_NOT_FOUND
 
-    def test_post(self, games_api):
+    def test_post(self, rest_api):
         data = {'name': 'new game'}
-        resp = games_api.post('/games', data)
+        resp = rest_api.post('/games', data)
 
         assert resp.status == falcon.HTTP_CREATED
         assert resp.json['id'] == 1
         assert resp.json['name'] == 'new game'
         assert resp.json['state'] == 'forming'
 
-    def test_patch_by_id(self, games_api, with_fixtures):
+    def test_patch_by_id(self, rest_api, with_fixtures):
         data = {"name": "deserted"}
-        resp = games_api.patch('/games/6', data)
+        resp = rest_api.patch('/games/6', data)
 
         assert resp.status == falcon.HTTP_OK
         assert resp.json['id'] == 6
         assert resp.json['name'] == 'deserted'
 
-    def test_delete(self, games_api, with_fixtures):
-        deleted = games_api.delete('/games/5')
+    def test_delete(self, rest_api, with_fixtures):
+        deleted = rest_api.delete('/games/5')
 
         assert deleted.status == falcon.HTTP_NO_CONTENT
 
-        remaining = games_api.get('/games')
+        remaining = rest_api.get('/games')
         assert remaining.status == falcon.HTTP_OK
         assert len(remaining.json) == len(fixtures.games) - 1
+
+
+class TestApiStack(object):
+    def test_get_all(self, rest_api, with_fixtures):
+        resp = rest_api.get('/stacks')
+
+        assert resp.status == falcon.HTTP_OK
+        assert len(resp.json) == len(fixtures.stacks)
+        assert resp.json[0]['id'] == 1
+
+    def test_get_by_id(self, rest_api, with_fixtures):
+        resp = rest_api.get('/stacks/3')
+
+        assert resp.status == falcon.HTTP_OK
+        assert resp.json['id'] == 3
+        assert resp.json['owner_id'] == 100
+        assert resp.json['label'] == IN_PLAY
+
+    def test_get_by_owner_id(self, rest_api, with_fixtures):
+        resp = rest_api.get('/stacks?owner_id=100')
+
+        assert resp.status == falcon.HTTP_OK
+        assert len(resp.json) == 3
+        assert resp.json[0]['owner_id'] == 100
+        assert resp.json[1]['owner_id'] == 100
+        assert resp.json[2]['owner_id'] == 100
+
+    def test_get_missing_by_id(self, rest_api, with_fixtures):
+        resp = rest_api.get('/stacks/80')
+
+        assert resp.status == falcon.HTTP_NOT_FOUND
+
+    def test_post(self, rest_api):
+        data = {'owner_id': 300, 'label': HAND}
+        resp = rest_api.post('/stacks', data)
+
+        assert resp.status == falcon.HTTP_CREATED
+        assert resp.json['id'] == 1
+        assert resp.json['owner_id'] == 300
+        assert resp.json['label'] == HAND
+
+    def test_patch_by_id(self, rest_api, with_fixtures):
+        data = {"size_limit": 5}
+        resp = rest_api.patch('/stacks/5', data)
+
+        assert resp.status == falcon.HTTP_OK
+        assert resp.json['id'] == 5
+        assert resp.json['owner_id'] == 200
+        assert resp.json['label'] == HAND
+        assert resp.json['size_limit'] == 5
+
+    def test_delete(self, rest_api, with_fixtures):
+        resp = rest_api.delete('/stacks/' + str(len(fixtures.stacks)))
+
+        assert resp.status == falcon.HTTP_NO_CONTENT
+        remaining = rest_api.get('/stacks')
+        assert remaining.status == falcon.HTTP_OK
+        assert len(remaining.json) == len(fixtures.stacks) - 1
