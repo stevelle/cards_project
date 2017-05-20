@@ -191,4 +191,3 @@ class TestApiStack(object):
         remaining = rest_api.get('/stacks')
         assert remaining.status == falcon.HTTP_OK
         assert len(remaining.json) == len(fixtures.stacks) - 1
-
