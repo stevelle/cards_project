@@ -273,3 +273,7 @@ class TestApiCards(object):
         resp = rest_api.delete('/cards/1')
 
         assert resp.status == falcon.HTTP_NO_CONTENT
+
+        remaining = rest_api.get('/cards')
+        assert remaining.status == falcon.HTTP_OK
+        assert len(remaining.json) == len(fixtures.cards) - 1
