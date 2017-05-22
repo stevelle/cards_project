@@ -10,6 +10,34 @@ Base = declarative_base()
 LOG = logging.getLogger(__name__)
 
 
+class Facing(enum.Enum):
+    """ Describes visibility of a Card """
+    down = 0b00
+    """ Previously taken a peek """
+    revealed = 0b01
+    peeking = 0b10
+    up = 0b11
+
+
+class Card(Base):
+    """ An individual card """
+    __tablename__ = 'cards'
+    id = Column(Integer, primary_key=True)
+    stack_id = Column(Integer, ForeignKey('stacks.id'))
+    """ position == 0 indicates top or left """
+    position = Column(Integer)
+    owner_facing = Column(Enum(Facing), default=Facing.down)
+    other_facing = Column(Enum(Facing), default=Facing.down)
+    suit = Column(String, nullable=True)
+    """ Effective sortable suit """
+    suit_value = Column(String, nullable=True, default=suit)
+    rank = Column(String, nullable=True)
+    """ Effective sortable rank """
+    rank_value = Column(Integer, nullable=True, default=rank)
+    recorded_at = Column(DateTime, default=dt.datetime.utcnow)
+    updated_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
+
+
 class Stack(Base):
     """ A stack of cards """
     __tablename__ = 'stacks'
