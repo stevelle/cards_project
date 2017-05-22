@@ -1,6 +1,6 @@
 import json
 
-from card_table import storage, HAND, DRAW_PILE, DISCARDS, IN_PLAY
+from card_table import commands, storage, HAND, DRAW_PILE, DISCARDS, IN_PLAY
 from card_table.cards import ACE, EIGHT, FOUR, JACK, NINE, QUEEN, TEN, HEART
 from card_table.cards import DIAMOND, DIAMONDS, HEARTS, SPADES
 from card_table.storage import Facing
@@ -49,15 +49,15 @@ cards = [{'stack_id': 1, 'position': 0, 'suit': SPADES, 'suit_value': SPADES,
           'rank': ACE, 'rank_value': 1}]
 
 
-commands = [{'operation': 'flip card', 'game_id': 2, 'actor_id': 700,
+commands = [{'operation': commands.MOVE_CARDS, 'game_id': 2, 'actor_id': 700,
              'changes': json.dumps({'cards': [
                  {'id': 9, 'owner_facing': [Facing.down.name, Facing.up.name],
                   'other_facing': [Facing.down.name, Facing.up.name]}]}),
-             'memo': 'flip the top card in draw pile'},
-            {'operation': 'draw card', 'game_id': 2, 'actor_id': 700,
+             'memo': 'flip the top card in the draw pile'},
+            {'operation': commands.MOVE_CARDS, 'game_id': 2, 'actor_id': 700,
              'changes': json.dumps({'cards': [
                  {'id': 9, 'other_facing': [Facing.up.name, Facing.down.name],
                   'stack_id': [8, 9], 'position': [0, 1]}]}),
-             'memo': 'draw top card from draw pile'},
-            {'operation': 'noop', 'game_id': 2, 'actor_id': 700,
+             'memo': 'draw the top card from the draw pile'},
+            {'operation': commands.NOOP, 'game_id': 2, 'actor_id': 700,
              'changes': '{}', 'memo': 'nothing to see here'}]

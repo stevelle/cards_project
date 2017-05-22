@@ -4,6 +4,7 @@ import falcon
 
 from falcon_autocrud.resource import CollectionResource, SingleResource
 
+from card_table import commands
 from card_table.storage import db_verifier, Game, Stack, Card, Command
 
 
@@ -31,7 +32,6 @@ class HealthResource(object):
         self.is_db_available = db_verifier(db_engine)
 
     def on_get(self, req, resp):
-        # PoC: always OK
         if self.is_db_available():
             resp.status = falcon.HTTP_200
             resp.body = self.ok_txt
@@ -61,7 +61,7 @@ class ResourceHelper(object):
             clasz.serialize_enums(data)
 
     ##########
-    # transform particular subdicts to strings
+    # transform particular subdicts to strings when inbound, to store as Text
     ######
     @staticmethod
     def _serialize_all_dicts(clasz, target):
@@ -89,6 +89,10 @@ class RestResource(SingleResource, ResourceHelper):
 class CommandCollectionResource(CollectionResource, ResourceHelper):
     model = Command
 
+    @staticmethod
+    def before_post(req, resp, db_session, resource, *args, **kwargs):
+        commands.execute(db_session, resource)
+
     def after_get(self, req, resp, new, *args, **kwargs):
         self._serialize_all_dicts(CommandResource, req.context['result'])
 
@@ -100,7 +104,7 @@ class CommandResource(RestResource):
     model = Command
 
     @staticmethod
-    def before_patch(req, resp, db_session, resource, *args, **kwargs):
+    def modify_patch(req, resp, resource, *args, **kwargs):
         if getattr(resource, 'changes', None):
             resource.changes = json.dumps(resource.changes)
 

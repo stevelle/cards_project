@@ -1,9 +1,10 @@
 import falcon
 import pytest
 from falcon_autocrud.middleware import Middleware
+from mock import patch, ANY
 from sqlalchemy.orm import sessionmaker
 
-from card_table import api, storage, HAND, IN_PLAY
+from card_table import api, storage, HAND, IN_PLAY, commands
 from card_table.cards import DIAMONDS, SPADES, SIX, SPADE
 from card_table.storage import Facing
 from test.card_table import test_db_engine, fixtures, FakeClient
@@ -299,18 +300,19 @@ class TestApiCommands(object):
         assert resp.status == falcon.HTTP_OK
         assert len(resp.json) == 3
         assert resp.json[0]['game_id'] == 2
-        assert resp.json[0]['operation'] == 'flip card'
+        assert resp.json[0]['operation'] == commands.MOVE_CARDS
         assert resp.json[1]['game_id'] == 2
-        assert resp.json[1]['operation'] == 'draw card'
+        assert resp.json[1]['operation'] == commands.MOVE_CARDS
         assert resp.json[2]['game_id'] == 2
-        assert resp.json[2]['operation'] == 'noop'
+        assert resp.json[2]['operation'] == commands.NOOP
 
     def test_get_missing_by_id(self, rest_api, with_fixtures):
         resp = rest_api.get('/commands/80')
 
         assert resp.status == falcon.HTTP_NOT_FOUND
 
-    def test_post(self, rest_api):
+    @patch('card_table.commands.Operations')
+    def test_post(self, operations, rest_api):
         data = {'operation': 'noop', 'game_id': 1, 'actor_id': 600,
                 'changes': "{'foo': 'bar'}", 'memo': 'nothing to see here'}
         resp = rest_api.post('/commands', data)
@@ -322,6 +324,7 @@ class TestApiCommands(object):
         assert resp.json['actor_id'] == 600
         assert resp.json['changes'] == {'foo': 'bar'}
         assert resp.json['memo'] == 'nothing to see here'
+        assert operations.do_noop.called
 
     def test_patch_by_id(self, rest_api, with_fixtures):
         data = {'changes': {'foo': 'bar'}}
