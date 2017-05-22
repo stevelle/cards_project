@@ -4,7 +4,7 @@ import falcon
 
 from falcon_autocrud.resource import CollectionResource, SingleResource
 
-from card_table.storage import db_verifier, Game, Stack, Card
+from card_table.storage import db_verifier, Game, Stack, Card, Command
 
 
 def create_api(middleware, db_engine):
@@ -16,6 +16,8 @@ def create_api(middleware, db_engine):
     app.add_route('/stacks/{id}', StackResource(db_engine))
     app.add_route('/cards', CardCollectionResource(db_engine))
     app.add_route('/cards/{id}', CardResource(db_engine))
+    app.add_route('/commands', CommandCollectionResource(db_engine))
+    app.add_route('/commands/{id}', CommandResource(db_engine))
     return app
 
 
@@ -44,6 +46,35 @@ class RestResource(SingleResource):
     def after_delete(req, resp, item, *args, **kwargs):
         resp.status = falcon.HTTP_NO_CONTENT
         req.context['result'] = None
+
+
+class CommandCollectionResource(CollectionResource):
+    model = Command
+
+    @staticmethod
+    def after_get(req, resp, new, *args, **kwargs):
+        _serialize_all_dicts(req.context['result'])
+
+    @staticmethod
+    def after_post(req, resp, new, *args, **kwargs):
+        _serialize_all_dicts(req.context['result'])
+
+
+class CommandResource(RestResource):
+    model = Command
+
+    @staticmethod
+    def after_get(req, resp, collection, *args, **kwargs):
+        _serialize_all_dicts(req.context['result'])
+
+    @staticmethod
+    def before_patch(req, resp, db_session, resource, *args, **kwargs):
+        if getattr(resource, 'changes', None):
+            resource.changes = json.dumps(resource.changes)
+
+    @staticmethod
+    def after_patch(req, resp, *args, **kwargs):
+        _serialize_all_dicts(req.context['result'])
 
 
 class GameCollectionResource(CollectionResource):
@@ -132,3 +163,21 @@ def __serialize_enums_for_model(thing):
         thing['owner_facing'] = thing['owner_facing'].name
     if 'other_facing' in thing:
         thing['other_facing'] = thing['other_facing'].name
+
+
+##########
+# transform particular subdicts to strings, and the back
+######
+def _serialize_all_dicts(result):
+    data = result['data']
+    if isinstance(data, list):
+        for item in data:
+            __serialize_dicts_for_model(item)
+    else:
+        __serialize_dicts_for_model(data)
+
+
+def __serialize_dicts_for_model(item):
+    if 'changes' in item:
+        changes = item['changes'].replace("'", '"')
+        item['changes'] = json.loads(changes)

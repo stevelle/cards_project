@@ -3,11 +3,23 @@ import enum
 
 import logging
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import bindparam, select
+from sqlalchemy import bindparam, select, Text
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Enum
 
 Base = declarative_base()
 LOG = logging.getLogger(__name__)
+
+
+class Command(Base):
+    """ Describes a step of play in a Game """
+    __tablename__ = 'commands'
+    id = Column(Integer, primary_key=True)
+    game_id = Column(Integer, ForeignKey('games.id'))
+    actor_id = Column(Integer)
+    operation = Column(String, index=True)
+    """ json blob describing the changes made by the command """
+    changes = Column(Text)
+    memo = Column(String, nullable=True)
 
 
 class Facing(enum.Enum):
