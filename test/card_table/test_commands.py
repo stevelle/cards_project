@@ -13,11 +13,14 @@ class TestCreateDeck(object):
 
         deck = Operations.do_create_deck(session, command)
 
+        assert len(deck) == 52
         assert session.addall.called_with(deck)
-        assert deck[0].rank == 'ace'
-        assert deck[0].rank_value == 1
-        assert deck[-1].rank == 'king'
-        assert deck[-1].rank_value == 13
+        aces = [c for c in deck if c.rank == 'ace']
+        assert len(aces) == 4
+        assert aces[0].rank_value == 1
+        kings = [c for c in deck if c.rank == 'king']
+        assert len(kings) == 4
+        assert kings[0].rank_value == 13
 
     @patch('sqlalchemy.orm.Session')
     def test_deck_ace_high(self, session):
@@ -25,11 +28,14 @@ class TestCreateDeck(object):
 
         deck = Operations.do_create_deck(session, command)
 
+        assert len(deck) == 52
         assert session.addall.called_with(deck)
-        assert deck[0].rank == '2'
-        assert deck[0].rank_value == 2
-        assert deck[-1].rank == 'ace'
-        assert deck[-1].rank_value == 14
+        twos = [c for c in deck if c.rank == '2']
+        assert len(twos) == 4
+        assert twos[0].rank_value == 2
+        aces = [c for c in deck if c.rank == 'ace']
+        assert len(aces) == 4
+        assert aces[0].rank_value == 14
 
     def test_deck_missing_stack_id(self):
         session = None
