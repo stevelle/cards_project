@@ -1,42 +1,20 @@
 import falcon
 import pytest
 from falcon_autocrud.middleware import Middleware
-from sqlalchemy.orm import sessionmaker
+from mock import patch
 
-from card_table import api, storage, HAND, IN_PLAY
-from card_table.cards import DIAMONDS, SPADES, SIX
+from card_table import api, HAND, IN_PLAY
+from card_table.commands import MOVE_CARDS, NOOP
+from card_table.cards import DIAMONDS, SPADES, SIX, SPADE
 from card_table.storage import Facing
-from test.card_table import test_db_engine, fixtures, FakeClient
-
-
-@pytest.fixture()
-def engine():
-    test_engine = test_db_engine()
-    storage.sync(test_engine)
-    return test_engine
+from test.card_table import FakeClient
+import test.card_table.fixtures as fixtures
 
 
 @pytest.fixture()
 def app(engine):
     test_app = api.create_api([Middleware()], engine)
     return test_app
-
-
-@pytest.fixture()
-def with_fixtures(engine):
-    sessions = sessionmaker(bind=engine)
-    session = sessions()
-
-    for model in fixtures.games:
-        session.add(storage.Game(**model))
-
-    for model in fixtures.stacks:
-        session.add(storage.Stack(**model))
-
-    for model in fixtures.cards:
-        session.add(storage.Card(**model))
-
-    session.commit()
 
 
 @pytest.fixture()
@@ -69,8 +47,8 @@ class TestApiHealth(object):
 
     def test_patch_health(self, client):
         resp = client.patch('/health', {'op': 'add',
-                                        "path": "/",
-                                        "value": {"name": "Alice"}})
+                                        'path': '/',
+                                        'value': {'name': 'Alice'}})
         assert resp.status == falcon.HTTP_METHOD_NOT_ALLOWED
 
     def test_delete_health(self, client):
@@ -123,7 +101,7 @@ class TestApiGame(object):
         assert resp.json['state'] == 'forming'
 
     def test_patch_by_id(self, rest_api, with_fixtures):
-        data = {"name": "deserted"}
+        data = {'name': 'deserted'}
         resp = rest_api.patch('/games/6', data)
 
         assert resp.status == falcon.HTTP_OK
@@ -235,7 +213,7 @@ class TestApiCards(object):
 
     def test_post(self, rest_api):
 
-        data = {'stack_id': 1, 'position': 2, 'suit': '♠',
+        data = {'stack_id': 1, 'position': 2, 'suit': SPADE,
                 'suit_value': SPADES, 'rank': SIX, 'rank_value': 6}
         resp = rest_api.post('/cards', data)
 
@@ -243,7 +221,7 @@ class TestApiCards(object):
         assert resp.json['id'] == 1
         assert resp.json['stack_id'] == 1
         assert resp.json['position'] == 2
-        assert resp.json['suit'] == '♠'
+        assert resp.json['suit'] == SPADE
         assert resp.json['suit_value'] == SPADES
         assert resp.json['rank'] == SIX
         assert resp.json['rank_value'] == 6
@@ -251,7 +229,7 @@ class TestApiCards(object):
         assert resp.json['other_facing'] == Facing.down.name
 
     def test_patch_by_id(self, rest_api, with_fixtures):
-        data = {"owner_facing": "peeking"}
+        data = {'owner_facing': 'peeking'}
         resp = rest_api.patch('/cards/1', data)
 
         assert resp.status == falcon.HTTP_OK
@@ -266,3 +244,75 @@ class TestApiCards(object):
         remaining = rest_api.get('/cards')
         assert remaining.status == falcon.HTTP_OK
         assert len(remaining.json) == len(fixtures.cards) - 1
+
+
+class TestApiCommands(object):
+    def test_get_all(self, rest_api, with_fixtures):
+        resp = rest_api.get('/commands')
+
+        assert resp.status == falcon.HTTP_OK
+        assert len(resp.json) == len(fixtures.commands)
+        assert resp.json[0]['id'] == 1
+        assert resp.json[0]['changes'] == {'cards': [
+            {'id': 9, 'owner_facing': [Facing.down.name, Facing.up.name],
+             'other_facing': [Facing.down.name, Facing.up.name]}]}
+
+    def test_get_by_id(self, rest_api, with_fixtures):
+        resp = rest_api.get('/commands/3')
+
+        assert resp.status == falcon.HTTP_OK
+        assert resp.json['id'] == 3
+        assert resp.json['game_id'] == 2
+        assert resp.json['actor_id'] == 700
+        assert resp.json['operation'] == 'noop'
+        assert resp.json['memo'] == 'nothing to see here'
+        assert resp.json['changes'] == {}
+
+    def test_get_by_game_id(self, rest_api, with_fixtures):
+        resp = rest_api.get('/commands?game_id=2')
+
+        assert resp.status == falcon.HTTP_OK
+        assert len(resp.json) == 3
+        assert resp.json[0]['game_id'] == 2
+        assert resp.json[0]['operation'] == MOVE_CARDS
+        assert resp.json[1]['game_id'] == 2
+        assert resp.json[1]['operation'] == MOVE_CARDS
+        assert resp.json[2]['game_id'] == 2
+        assert resp.json[2]['operation'] == NOOP
+
+    def test_get_missing_by_id(self, rest_api, with_fixtures):
+        resp = rest_api.get('/commands/80')
+
+        assert resp.status == falcon.HTTP_NOT_FOUND
+
+    @patch('card_table.commands.Operations')
+    def test_post(self, operations, rest_api):
+        data = {'operation': 'noop', 'game_id': 1, 'actor_id': 600,
+                'changes': "{'foo': 'bar'}", 'memo': 'nothing to see here'}
+        resp = rest_api.post('/commands', data)
+
+        assert resp.status == falcon.HTTP_CREATED
+        assert resp.json['id'] == 1
+        assert resp.json['game_id'] == 1
+        assert resp.json['operation'] == 'noop'
+        assert resp.json['actor_id'] == 600
+        assert resp.json['changes'] == {'foo': 'bar'}
+        assert resp.json['memo'] == 'nothing to see here'
+        assert operations.do_noop.called
+
+    def test_patch_by_id(self, rest_api, with_fixtures):
+        data = {'changes': {'foo': 'bar'}}
+        resp = rest_api.patch('/commands/1', data)
+
+        assert resp.status == falcon.HTTP_OK
+        assert resp.json['id'] == 1
+        assert resp.json['changes'] == {'foo': 'bar'}
+
+    def test_delete(self, rest_api, with_fixtures):
+        resp = rest_api.delete('/commands/3')
+
+        assert resp.status == falcon.HTTP_NO_CONTENT
+
+        remaining = rest_api.get('/commands')
+        assert remaining.status == falcon.HTTP_OK
+        assert len(remaining.json) == len(fixtures.commands) - 1
