@@ -26,7 +26,8 @@ stacks = [{'game_id': 4, 'owner_id': 0, 'label': DRAW_PILE},
           {'game_id': 4, 'owner_id': 200, 'label': IN_PLAY},
           {'game_id': 4, 'owner_id': 200, 'label': DISCARDS},
           {'game_id': 2, 'owner_id': 700, 'label': DRAW_PILE},
-          {'game_id': 2, 'owner_id': 700, 'label': HAND}]
+          {'game_id': 2, 'owner_id': 700, 'label': HAND},
+          {'game_id': 1, 'owner_id': 0, 'label': DRAW_PILE}]
 
 cards = [{'stack_id': 1, 'position': 0, 'suit': SPADES, 'suit_value': SPADES,
           'rank': QUEEN, 'rank_value': 12},

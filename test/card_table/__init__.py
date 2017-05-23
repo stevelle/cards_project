@@ -51,7 +51,11 @@ class FakeClient(object):
         resp.body = b''.join(list(body)) if body else b''
         if body:
             resp.body = resp.body.decode()
-            resp.json = json.loads(resp.body)['data']
+            json_payload = json.loads(resp.body)
+            if 'data' in json_payload:
+                resp.json = json_payload['data']
+            else:
+                resp.json = json_payload
         return resp
 
     @staticmethod
