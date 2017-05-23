@@ -17,6 +17,16 @@ related plugins are featured.
    to the model of Microservices.
  - The project is organized as a [monorepo](https://danluu.com/monorepo/).
    Sub-projects contained in this repo are each [listed below](README.md/#sub-projects).
+ - Some aspects of the Architecture will experimentally explore the use of 
+   [Command Query Responsibility Separation (CQRS)](https://www.martinfowler.com/bliki/CQRS.html)
+   to provide transactional integrity and view isolation to the complex
+   changes expected in exercising the data models.
+
+#### Unresolved concerns
+ - API versioning
+ - API discoverability
+ - API Authc/Authz
+ - API Caching
 
 ## Deploying
 This project is just getting started. There is no deployment support, no model
