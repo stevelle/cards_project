@@ -3,7 +3,7 @@ import random
 import falcon
 
 import card_table.cards as cards
-from card_table.storage import Card
+from card_table.storage import Card, Stack
 
 RANDOM = random.SystemRandom()
 
@@ -47,7 +47,7 @@ class Operations(object):
         :return a new deck of cards
         """
         changes = Operations.__get_required_changes(command)
-        stack_id = Operations.__get_required_stack_id(changes)
+        stack_id = Operations.__require_stack_id(db_session, changes)
 
         # default ace low
         ranks = cards.COMMON_RANKS_ACE_LOW
@@ -91,7 +91,7 @@ class Operations(object):
         :param db_session: db session to use
         :param command: the command to perform
         """
-        stack_id = Operations.__get_required_stack_id(command=command)
+        stack_id = Operations.__require_stack_id(db_session, command=command)
         # use a copy of the found cards, for safety, testability
         card_list = list(Card.find_by_stack(stack_id, db_session))
         shuffled = 0
@@ -105,15 +105,19 @@ class Operations(object):
         # not returning the shuffled stack to prevent leaking secrets
 
     @staticmethod
-    def __get_required_stack_id(changes=None, command=None):
-        if changes is None:
-            changes = Operations.__get_required_changes(command)
+    def __require_stack_id(db_session, container=None, command=None):
+        if container is None:
+            container = Operations.__get_required_changes(command)
+
         try:
-            stack_id = changes['stack_id']
+            stack_id = container['stack_id']
         except KeyError:
             raise falcon.HTTPMissingParam(param_name='stack_id')
 
-        # TODO validate the stack_id
+        found_stack = Stack.get(stack_id, db_session)
+        if not found_stack:
+            raise falcon.HTTPInvalidParam(msg=stack_id, param_name='stack_id')
+
         return stack_id
 
     @staticmethod

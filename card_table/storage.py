@@ -79,6 +79,10 @@ class Stack(Base):
     """ An actual limit on the number of cards held in a stack. """
     size_limit = Column(Integer, nullable=True)
 
+    @staticmethod
+    def get(stack_id, db_session):
+        return db_session.query(Stack).get(stack_id)
+
 
 class GameState(enum.Enum):
     forming = 0

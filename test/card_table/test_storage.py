@@ -1,4 +1,5 @@
-from card_table.storage import Card
+from card_table import IN_PLAY
+from card_table.storage import Card, Stack
 
 
 class TestCard(object):
@@ -10,3 +11,12 @@ class TestCard(object):
 
     def test_find_by_stack_missing(self, session):
         assert len(Card.find_by_stack(80, session)) == 0
+
+
+class TestStack(object):
+
+    def test_get(self, session, with_fixtures):
+        assert Stack.get(3, session).label == IN_PLAY
+
+    def test_get_missing(self, session):
+        assert Stack.get(80, session) is None

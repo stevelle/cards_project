@@ -13,6 +13,7 @@ class TestCreateDeck(object):
 
         deck = Operations.do_create_deck(session, command)
 
+        assert session.query.get.called_once_with(1)
         assert len(deck) == 52
         assert session.addall.called_with(deck)
         aces = [c for c in deck if c.rank == 'ace']
@@ -28,6 +29,7 @@ class TestCreateDeck(object):
 
         deck = Operations.do_create_deck(session, command)
 
+        assert session.query.get.called_once_with(1)
         assert len(deck) == 52
         assert session.addall.called_with(deck)
         twos = [c for c in deck if c.rank == '2']
@@ -36,6 +38,15 @@ class TestCreateDeck(object):
         aces = [c for c in deck if c.rank == 'ace']
         assert len(aces) == 4
         assert aces[0].rank_value == 14
+
+    @patch('sqlalchemy.orm.Session')
+    @patch('card_table.storage.Stack.get')
+    def test_deck_missing_stack(self, get, session):
+        command = {'changes': {'stack_id': 1}}
+        get.return_value = None
+
+        with pytest.raises(HTTPBadRequest):
+            Operations.do_create_deck(session, command)
 
     def test_deck_missing_stack_id(self):
         session = None
@@ -55,8 +66,9 @@ class TestCreateDeck(object):
 class TestShuffleStack(object):
 
     @patch('card_table.storage.Card.find_by_stack')
+    @patch('card_table.storage.Stack.get')
     @patch('card_table.commands.RANDOM')
-    def test_shuffle(self, random, find_by_stack, session):
+    def test_shuffle(self, random, get, find_by_stack, session):
         cards = stub_cards()
         find_by_stack.return_value = cards
         command = {'changes': {'stack_id': 1}}
@@ -70,6 +82,15 @@ class TestShuffleStack(object):
         assert cards[1].position == 1
         assert cards[0].position == 2
         assert cards[3].position == 3
+
+    @patch('card_table.storage.Stack.get')
+    def test_shuffle_missing_stack(self, get):
+        session = None
+        get.return_value = None
+        command = {'changes': {}}
+
+        with pytest.raises(HTTPBadRequest):
+            Operations.do_shuffle_stack(session, command)
 
     def test_shuffle_missing_stack_id(self):
         session = None
