@@ -2,15 +2,6 @@ import json
 from urllib.parse import urlparse, urlencode
 
 from falcon import testing
-from sqlalchemy import create_engine
-
-from card_table import storage
-
-
-def test_db_engine():
-    engine = create_engine("sqlite:///:memory:")
-    storage.sync(engine)
-    return engine
 
 
 class FakeClient(object):

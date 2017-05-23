@@ -1,8 +1,13 @@
 import json
 
-from card_table import commands, storage, HAND, DRAW_PILE, DISCARDS, IN_PLAY
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from card_table import storage, HAND, DRAW_PILE, DISCARDS, IN_PLAY
 from card_table.cards import ACE, EIGHT, FOUR, JACK, NINE, QUEEN, TEN, HEART
 from card_table.cards import DIAMOND, DIAMONDS, HEARTS, SPADES
+from card_table.commands import MOVE_CARDS, NOOP
 from card_table.storage import Facing
 
 games = [{'name': 'forming', 'state': storage.GameState.forming},
@@ -49,15 +54,57 @@ cards = [{'stack_id': 1, 'position': 0, 'suit': SPADES, 'suit_value': SPADES,
           'rank': ACE, 'rank_value': 1}]
 
 
-commands = [{'operation': commands.MOVE_CARDS, 'game_id': 2, 'actor_id': 700,
+commands = [{'operation': MOVE_CARDS, 'game_id': 2, 'actor_id': 700,
              'changes': json.dumps({'cards': [
                  {'id': 9, 'owner_facing': [Facing.down.name, Facing.up.name],
                   'other_facing': [Facing.down.name, Facing.up.name]}]}),
              'memo': 'flip the top card in the draw pile'},
-            {'operation': commands.MOVE_CARDS, 'game_id': 2, 'actor_id': 700,
+            {'operation': MOVE_CARDS, 'game_id': 2, 'actor_id': 700,
              'changes': json.dumps({'cards': [
                  {'id': 9, 'other_facing': [Facing.up.name, Facing.down.name],
                   'stack_id': [8, 9], 'position': [0, 1]}]}),
              'memo': 'draw the top card from the draw pile'},
-            {'operation': commands.NOOP, 'game_id': 2, 'actor_id': 700,
+            {'operation': NOOP, 'game_id': 2, 'actor_id': 700,
              'changes': '{}', 'memo': 'nothing to see here'}]
+
+
+@pytest.fixture
+def engine():
+    test_engine = test_db_engine()
+    storage.sync(test_engine)
+    return test_engine
+
+
+@pytest.fixture
+def sessions(engine):
+    return sessionmaker(bind=engine)
+
+
+@pytest.fixture()
+def session(sessions):
+    session = sessions()
+    yield session
+    session.close()
+
+
+@pytest.fixture()
+def with_fixtures(session):
+    for model in games:
+        session.add(storage.Game(**model))
+
+    for model in stacks:
+        session.add(storage.Stack(**model))
+
+    for model in cards:
+        session.add(storage.Card(**model))
+
+    for model in commands:
+        session.add(storage.Command(**model))
+
+    session.commit()
+
+
+def test_db_engine():
+    db_engine = create_engine("sqlite:///:memory:")
+    storage.sync(db_engine)
+    return db_engine

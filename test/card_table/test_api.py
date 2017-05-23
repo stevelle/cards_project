@@ -1,46 +1,20 @@
 import falcon
 import pytest
 from falcon_autocrud.middleware import Middleware
-from mock import patch, ANY
-from sqlalchemy.orm import sessionmaker
+from mock import patch
 
-from card_table import api, storage, HAND, IN_PLAY, commands
+from card_table import api, HAND, IN_PLAY
+from card_table.commands import MOVE_CARDS, NOOP
 from card_table.cards import DIAMONDS, SPADES, SIX, SPADE
 from card_table.storage import Facing
-from test.card_table import test_db_engine, fixtures, FakeClient
-
-
-@pytest.fixture()
-def engine():
-    test_engine = test_db_engine()
-    storage.sync(test_engine)
-    return test_engine
+from test.card_table import FakeClient
+import test.card_table.fixtures as fixtures
 
 
 @pytest.fixture()
 def app(engine):
     test_app = api.create_api([Middleware()], engine)
     return test_app
-
-
-@pytest.fixture()
-def with_fixtures(engine):
-    sessions = sessionmaker(bind=engine)
-    session = sessions()
-
-    for model in fixtures.games:
-        session.add(storage.Game(**model))
-
-    for model in fixtures.stacks:
-        session.add(storage.Stack(**model))
-
-    for model in fixtures.cards:
-        session.add(storage.Card(**model))
-
-    for model in fixtures.commands:
-        session.add(storage.Command(**model))
-
-    session.commit()
 
 
 @pytest.fixture()
@@ -300,11 +274,11 @@ class TestApiCommands(object):
         assert resp.status == falcon.HTTP_OK
         assert len(resp.json) == 3
         assert resp.json[0]['game_id'] == 2
-        assert resp.json[0]['operation'] == commands.MOVE_CARDS
+        assert resp.json[0]['operation'] == MOVE_CARDS
         assert resp.json[1]['game_id'] == 2
-        assert resp.json[1]['operation'] == commands.MOVE_CARDS
+        assert resp.json[1]['operation'] == MOVE_CARDS
         assert resp.json[2]['game_id'] == 2
-        assert resp.json[2]['operation'] == commands.NOOP
+        assert resp.json[2]['operation'] == NOOP
 
     def test_get_missing_by_id(self, rest_api, with_fixtures):
         resp = rest_api.get('/commands/80')

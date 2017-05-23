@@ -49,6 +49,10 @@ class Card(Base):
     recorded_at = Column(DateTime, default=dt.datetime.utcnow)
     updated_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
 
+    @staticmethod
+    def find_by_stack(stack_id, db_session):
+        return db_session.query(Card).filter(Card.stack_id == stack_id).all()
+
 
 class Stack(Base):
     """ A stack of cards """
