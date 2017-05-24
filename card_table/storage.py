@@ -20,6 +20,16 @@ class Command(Base):
     """ json blob describing the changes made by the command """
     changes = Column(Text)
     memo = Column(String, nullable=True)
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    updated_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
+
+    @staticmethod
+    def protected_properties():
+        return [Command.id, Command.created_at, Command.updated_at]
+
+    @staticmethod
+    def immutable_properties():
+        return [Command.game_id, Command.actor_id]
 
 
 class Facing(enum.Enum):
@@ -46,12 +56,20 @@ class Card(Base):
     rank = Column(String, nullable=True)
     """ Effective sortable rank """
     rank_value = Column(Integer, nullable=True, default=rank)
-    recorded_at = Column(DateTime, default=dt.datetime.utcnow)
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
     updated_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
 
     @staticmethod
     def find_by_stack(stack_id, db_session):
         return db_session.query(Card).filter(Card.stack_id == stack_id).all()
+
+    @staticmethod
+    def protected_properties():
+        return [Card.id, Card.created_at, Card.updated_at]
+
+    @staticmethod
+    def immutable_properties():
+        return []
 
 
 class Stack(Base):
@@ -62,7 +80,7 @@ class Stack(Base):
     """ owner_id == 0 : a shared stack, such as a shared draw pile """
     owner_id = Column(Integer, index=True)
     label = Column(String, index=True)
-    recorded_at = Column(DateTime, default=dt.datetime.utcnow)
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
     updated_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
     # META-PROPERTIES, for use by a game engine to store state
     """ Indicates maximum visible size of the deck to observers.
@@ -83,6 +101,14 @@ class Stack(Base):
     def get(stack_id, db_session):
         return db_session.query(Stack).get(stack_id)
 
+    @staticmethod
+    def protected_properties():
+        return [Stack.id, Stack.game_id, Stack.created_at, Stack.updated_at]
+
+    @staticmethod
+    def immutable_properties():
+        return []
+
 
 class GameState(enum.Enum):
     forming = 0
@@ -102,6 +128,14 @@ class Game(Base):
     state = Column(Enum(GameState), default=GameState.forming)
     created_at = Column(DateTime, default=dt.datetime.utcnow)
     updated_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
+
+    @staticmethod
+    def protected_properties():
+        return [Game.id, Game.created_at, Game.updated_at]
+
+    @staticmethod
+    def immutable_properties():
+        return []
 
 
 def sync(engine):

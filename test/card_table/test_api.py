@@ -117,6 +117,24 @@ class TestApiGame(object):
         assert remaining.status == falcon.HTTP_OK
         assert len(remaining.json) == len(fixtures.games) - 1
 
+    def test_patch_id_forbidden(self, rest_api, with_fixtures):
+        data = {"id": '80'}
+        resp = rest_api.patch('/games/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+
+    def test_patch_created_at_forbidden(self, rest_api, with_fixtures):
+        data = {"created_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/games/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+
+    def test_patch_updated_at_forbidden(self, rest_api, with_fixtures):
+        data = {"updated_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/games/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+
 
 class TestApiStack(object):
     def test_get_all(self, rest_api, with_fixtures):
@@ -174,6 +192,30 @@ class TestApiStack(object):
         remaining = rest_api.get('/stacks')
         assert remaining.status == falcon.HTTP_OK
         assert len(remaining.json) == len(fixtures.stacks) - 1
+
+    def test_patch_id_forbidden(self, rest_api, with_fixtures):
+        data = {"id": '80'}
+        resp = rest_api.patch('/stacks/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+
+    def test_patch_game_id_forbidden(self, rest_api, with_fixtures):
+        data = {"game_id": 5}
+        resp = rest_api.patch('/stacks/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+
+    def test_patch_created_at_forbidden(self, rest_api, with_fixtures):
+        data = {"created_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/stacks/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+
+    def test_patch_updated_at_forbidden(self, rest_api, with_fixtures):
+        data = {"updated_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/stacks/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
 
 
 class TestApiCards(object):
@@ -244,6 +286,24 @@ class TestApiCards(object):
         remaining = rest_api.get('/cards')
         assert remaining.status == falcon.HTTP_OK
         assert len(remaining.json) == len(fixtures.cards) - 1
+
+    def test_patch_id_forbidden(self, rest_api, with_fixtures):
+        data = {"id": '80'}
+        resp = rest_api.patch('/cards/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+
+    def test_patch_created_at_forbidden(self, rest_api, with_fixtures):
+        data = {"created_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/cards/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+
+    def test_patch_updated_at_forbidden(self, rest_api, with_fixtures):
+        data = {"updated_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/cards/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
 
 
 class TestApiCommands(object):
@@ -341,3 +401,33 @@ class TestApiCommands(object):
         remaining = rest_api.get('/commands')
         assert remaining.status == falcon.HTTP_OK
         assert len(remaining.json) == len(fixtures.commands) - 1
+
+    def test_patch_id_forbidden(self, rest_api, with_fixtures):
+        data = {"id": '80'}
+        resp = rest_api.patch('/commands/3', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+
+    def test_patch_game_id_forbidden(self, rest_api, with_fixtures):
+        data = {"game_id": 5}
+        resp = rest_api.patch('/commands/3', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+
+    def test_patch_actor_id_forbidden(self, rest_api, with_fixtures):
+        data = {"actor_id": 503}
+        resp = rest_api.patch('/commands/3', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+
+    def test_patch_created_at_forbidden(self, rest_api, with_fixtures):
+        data = {"created_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/commands/3', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+
+    def test_patch_updated_at_forbidden(self, rest_api, with_fixtures):
+        data = {"updated_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/commands/3', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
