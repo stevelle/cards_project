@@ -123,6 +123,7 @@ class CommandResource(RestResource):
 
 class CardCollectionResource(CollectionResource, ResourceHelper):
     model = Card
+    # TODO validate the card is landing in a valid stack
 
     def after_post(self, req, resp, new, *args, **kwargs):
         self._serialize_all_enums(CardResource, req.context['result'])
@@ -136,6 +137,7 @@ class CardCollectionResource(CollectionResource, ResourceHelper):
 
 class CardResource(RestResource):
     model = Card
+    # TODO validate the card is landing in a valid stack
 
     def after_get(self, req, resp, collection, *args, **kwargs):
         self._serialize_all_enums(self.__class__, req.context['result'])
@@ -153,10 +155,12 @@ class CardResource(RestResource):
 
 class StackCollectionResource(CollectionResource):
     model = Stack
+    # TODO validate the stack is in a valid game
 
 
 class StackResource(RestResource):
     model = Stack
+    # TODO validate the stack is in a valid game
 
 
 class GameCollectionResource(CollectionResource, ResourceHelper):

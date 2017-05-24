@@ -71,7 +71,7 @@ class Operations(object):
         """ Move one or more cards in some way
 
         :param db_session: db session to use
-        :param command: the command to perform
+        :param kwargs: the command to perform
         """
         # TODO Implementation
         pass
