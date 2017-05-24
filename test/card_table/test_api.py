@@ -286,9 +286,9 @@ class TestApiCommands(object):
         assert resp.status == falcon.HTTP_NOT_FOUND
 
     @patch('card_table.commands.Operations')
-    def test_post(self, operations, rest_api):
+    def test_post_noop(self, operations, rest_api):
         data = {'operation': 'noop', 'game_id': 1, 'actor_id': 600,
-                'changes': "{'foo': 'bar'}", 'memo': 'nothing to see here'}
+                'changes': '{"foo": "bar"}', 'memo': 'nothing to see here'}
         resp = rest_api.post('/commands', data)
 
         assert resp.status == falcon.HTTP_CREATED
@@ -299,6 +299,31 @@ class TestApiCommands(object):
         assert resp.json['changes'] == {'foo': 'bar'}
         assert resp.json['memo'] == 'nothing to see here'
         assert operations.do_noop.called
+
+    @patch('card_table.commands.Operations')
+    def test_post_create_deck(self, operations, rest_api):
+        data = {'operation': 'create deck', 'game_id': 1, 'actor_id': 600,
+                'changes': '{"stack_id": 10}', 'memo': 'new deck'}
+        resp = rest_api.post('/commands', data)
+
+        assert resp.status == falcon.HTTP_CREATED
+        assert resp.json['id'] == 1
+        assert resp.json['game_id'] == 1
+        assert resp.json['operation'] == 'create deck'
+        assert resp.json['actor_id'] == 600
+        assert resp.json['changes'] == {'stack_id': 10}
+        assert resp.json['memo'] == 'new deck'
+
+        expected_dict = {'stack_id': 10}
+        assert operations.do_create_deck.called_once_with(expected_dict)
+
+    @patch('card_table.commands.Operations')
+    def test_post_invalid_embedded_json(self, operations, rest_api):
+        data = {'operation': 'noop', 'game_id': 1, 'actor_id': 600,
+                'changes': '{invalid json', 'memo': 'new deck'}
+
+        resp = rest_api.post('/commands', data)
+        assert resp.status == falcon.HTTP_BAD_REQUEST
 
     def test_patch_by_id(self, rest_api, with_fixtures):
         data = {'changes': {'foo': 'bar'}}

@@ -1,9 +1,10 @@
+import json
 import random
 
 import falcon
 
 import card_table.cards as cards
-from card_table.storage import Card
+from card_table.storage import Card, Stack
 
 RANDOM = random.SystemRandom()
 
@@ -21,7 +22,8 @@ def execute(db_session, resource):
 
         func = getattr(Operations, f_name, None)
         if func:
-            return func(db_session, resource)
+            kwargs = __get_kwargs(resource)
+            return func(db_session, **kwargs)
 
     raise falcon.HTTPInvalidParam(msg=resource.operation,
                                   param_name='operation')
@@ -30,29 +32,28 @@ def execute(db_session, resource):
 class Operations(object):
 
     @staticmethod
-    def do_create_deck(db_session, command):
+    def do_create_deck(db_session, **kwargs):
         """ Create a standard deck of cards
 
         The resulting deck is ordered consistently, ascending, by suit.
 
         The command MUST contain (key, value): ('changes', dict())
-        The changes dict MUST contain (key, value): ('stack_id', {integer})
-            where {integer} is an existing stack to place the cards into
+        The kwargs MUST contain (key, value): ('stack_id', {integer}) where
+            {integer} is an existing stack to place the cards into
         The changed dict MAY contain (key, value):
             ('ace': ['high', 'low']) to indicate the value of an ace in play
             DEFAULT: ace is low
 
         :param db_session: db session to use
-        :param command: the command to perform
+        :param kwargs: the command to perform
         :return a new deck of cards
         """
-        changes = Operations.__get_required_changes(command)
-        stack_id = Operations.__get_required_stack_id(changes)
+        stack_id = Operations.__require_stack_id(db_session, **kwargs)
 
         # default ace low
         ranks = cards.COMMON_RANKS_ACE_LOW
-        if 'ace' in changes:
-            if changes['ace'] == 'high':
+        if 'ace' in kwargs:
+            if kwargs['ace'] == 'high':
                 ranks = cards.COMMON_RANKS_ACE_HIGH
 
         deck = []
@@ -66,7 +67,7 @@ class Operations(object):
         return deck
 
     @staticmethod
-    def do_move_cards(db_session, command):
+    def do_move_cards(db_session, **kwargs):
         """ Move one or more cards in some way
 
         :param db_session: db session to use
@@ -76,22 +77,23 @@ class Operations(object):
         pass
 
     @staticmethod
-    def do_noop(**kwargs):
+    def do_noop(db_session, **kwargs):
         """ Perform a No-Op
 
+        :param db_session: ignored
         :param kwargs: all args are ignored
         """
         # No-op
         pass
 
     @staticmethod
-    def do_shuffle_stack(db_session, command):
+    def do_shuffle_stack(db_session, **kwargs):
         """ Shuffle cards in a stack
 
         :param db_session: db session to use
-        :param command: the command to perform
+        :param kwargs: the command to perform
         """
-        stack_id = Operations.__get_required_stack_id(command=command)
+        stack_id = Operations.__require_stack_id(db_session, **kwargs)
         # use a copy of the found cards, for safety, testability
         card_list = list(Card.find_by_stack(stack_id, db_session))
         shuffled = 0
@@ -105,21 +107,25 @@ class Operations(object):
         # not returning the shuffled stack to prevent leaking secrets
 
     @staticmethod
-    def __get_required_stack_id(changes=None, command=None):
-        if changes is None:
-            changes = Operations.__get_required_changes(command)
+    def __require_stack_id(db_session, **kwargs):
         try:
-            stack_id = changes['stack_id']
+            stack_id = kwargs['stack_id']
         except KeyError:
             raise falcon.HTTPMissingParam(param_name='stack_id')
 
-        # TODO validate the stack_id
+        found_stack = Stack.get(stack_id, db_session)
+        if not found_stack:
+            raise falcon.HTTPInvalidParam(msg=stack_id, param_name='stack_id')
+
         return stack_id
 
-    @staticmethod
-    def __get_required_changes(command):
-        try:
-            changes = command['changes']
-        except KeyError:
-            raise falcon.HTTPMissingParam(param_name='changes')
-        return changes
+
+def __get_kwargs(command):
+    try:
+        changes = command.changes
+        if changes:
+            return json.loads(changes)
+
+        raise falcon.HTTPMissingParam(param_name='changes')
+    except ValueError:
+        raise falcon.HTTPInvalidParam(msg='', param_name='changes')
