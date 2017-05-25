@@ -5,7 +5,7 @@ import falcon
 from falcon_autocrud.resource import CollectionResource, SingleResource
 
 from card_table import commands
-from card_table.common import ensure_modifiable
+from card_table.common import ensure_modifiable, require_record
 from card_table.storage import db_verifier, Game, Stack, Card, Command
 
 
@@ -81,11 +81,11 @@ class Protected(object):
 
     def before_patch(self, req, resp, db_session, resource, *args, **kwargs):
         """ Common handling of protected / immutable properties """
-        ensure_modifiable(type(resource), req.context['doc'])
+        ensure_modifiable(self.model, req.context['doc'])
 
     def before_post(self, req, resp, db_session, resource, *args, **kwargs):
         """ Common handling of protected properties """
-        ensure_modifiable(type(resource), req.context['doc'],
+        ensure_modifiable(self.model, req.context['doc'],
                           allow_immutables=True)
 
 
@@ -108,6 +108,7 @@ class CommandCollectionResource(RestCollectionResource):
     def before_post(self, req, resp, db_session, resource, *args, **kwargs):
         super(CommandCollectionResource, self).before_post(
             req, resp, db_session, resource, *args, **kwargs)
+
         commands.execute(db_session, resource)
 
 
@@ -115,28 +116,41 @@ class CommandResource(RestResource):
     model = Command
 
     def modify_patch(self, req, resp, resource, *args, **kwargs):
+        super(CommandResource, self).modify_patch(
+            req, resp, resource, *args, **kwargs)
+
         if getattr(resource, 'changes', None):
             resource.changes = json.dumps(resource.changes)
 
 
 class CardCollectionResource(RestCollectionResource):
     model = Card
-    # TODO validate the card is landing in a valid stack, in the same game
+
+    def before_post(self, req, resp, db_session, resource, *args, **kwargs):
+        super(CardCollectionResource, self).before_post(
+            req, resp, db_session, resource, *args, **kwargs)
+
+        require_record(db_session, Stack, 'stack_id', req.context['doc'])
 
 
 class CardResource(RestResource):
     model = Card
-    # TODO validate the card is landing in a valid stack, in the same game
+    # TODO validate the card is landing in a valid stack, in the same game?
 
 
 class StackCollectionResource(RestCollectionResource):
     model = Stack
-    # TODO validate the stack is in a valid game
+
+    def before_post(self, req, resp, db_session, resource, *args, **kwargs):
+        super(StackCollectionResource, self).before_post(
+            req, resp, db_session, resource, *args, **kwargs)
+
+        require_record(db_session, Game, 'game_id', req.context['doc'])
 
 
 class StackResource(RestResource):
     model = Stack
-    # TODO validate the stack is in a valid game
+    # TODO validate the stack is in a valid game?
 
 
 class GameCollectionResource(RestCollectionResource):

@@ -121,11 +121,11 @@ class Stack(Base):
 
     @staticmethod
     def protected_properties():
-        return [Stack.id, Stack.game_id, Stack.created_at, Stack.updated_at]
+        return [Stack.id, Stack.created_at, Stack.updated_at]
 
     @staticmethod
     def immutable_properties():
-        return []
+        return [Stack.game_id]
 
 
 class GameState(enum.Enum):
@@ -146,6 +146,10 @@ class Game(Base):
     state = Column(Enum(GameState), default=GameState.forming)
     created_at = Column(DateTime, default=dt.datetime.utcnow)
     updated_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
+
+    @staticmethod
+    def get(record_id, db_session):
+        return db_session.query(Game).get(record_id)
 
     @staticmethod
     def protected_properties():

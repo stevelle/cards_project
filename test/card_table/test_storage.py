@@ -1,6 +1,6 @@
 from card_table import IN_PLAY
 from card_table.cards import DIAMOND, EIGHT
-from card_table.storage import Card, Stack
+from card_table.storage import Card, Stack, Game
 
 
 class TestCard(object):
@@ -26,3 +26,12 @@ class TestStack(object):
 
     def test_get_missing(self, session):
         assert Stack.get(80, session) is None
+
+
+class TestGame(object):
+
+    def test_get(self, session, with_fixtures):
+        assert Game.get(5, session).name == 'paused'
+
+    def test_get_missing(self, session):
+        assert Game.get(80, session) is None

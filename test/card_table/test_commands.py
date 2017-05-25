@@ -3,7 +3,7 @@ from falcon import HTTPBadRequest
 from mock import patch
 
 from card_table.commands import execute, Operations
-from card_table.storage import Command
+from card_table.storage import Command, Card
 
 
 class TestExecute(object):
@@ -147,6 +147,13 @@ class TestMoveCards(object):
         kwargs = {"cards": [{"id": 4, "position": 4}]}
 
         Operations.do_move_cards(session, **kwargs)
+        assert Card.get(4, session).position == 4
+
+    def test_card_changes_stacks(self, session, with_fixtures):
+        kwargs = {"cards": [{"id": 4, "stack_id": 4}]}
+
+        Operations.do_move_cards(session, **kwargs)
+        assert Card.get(4, session).stack_id == 4
 
     def test_missing_cards(self):
         session = None
@@ -180,6 +187,12 @@ class TestMoveCards(object):
 
     def test_update_protected_property(self, session, with_fixtures):
         kwargs = {"cards": [{"id": 4, "updated_at": "2016-09-14T14:25:47Z"}]}
+
+        with pytest.raises(HTTPBadRequest):
+            Operations.do_move_cards(session, **kwargs)
+
+    def test_card_changes_stack_invalid(self, session, with_fixtures):
+        kwargs = {"cards": [{"id": 4, "stack_id": 80}]}
 
         with pytest.raises(HTTPBadRequest):
             Operations.do_move_cards(session, **kwargs)

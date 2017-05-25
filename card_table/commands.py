@@ -124,4 +124,5 @@ def __get_kwargs(command):
 
         raise falcon.HTTPMissingParam(param_name='changes')
     except ValueError:
-        raise falcon.HTTPInvalidParam(msg='', param_name='changes')
+        raise falcon.HTTPInvalidParam(msg='Invalid JSON',
+                                      param_name='changes')
