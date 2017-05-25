@@ -61,7 +61,7 @@ class Card(Base):
 
     @staticmethod
     def get(record_id, db_session):
-        return db_session.query(__class__).get(record_id)
+        return db_session.query(Card).get(record_id)
 
     @staticmethod
     def find_by_stack(stack_id, db_session):
@@ -103,7 +103,7 @@ class Stack(Base):
 
     @staticmethod
     def get(record_id, db_session):
-        return db_session.query(__class__).get(record_id)
+        return db_session.query(Stack).get(record_id)
 
     @staticmethod
     def protected_properties():

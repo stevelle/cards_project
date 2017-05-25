@@ -2,7 +2,6 @@ import json
 import random
 
 import falcon
-#import sqlalchemy.orm.attributes as attributes
 
 import card_table.cards as cards
 from card_table.storage import Card, Stack
@@ -76,7 +75,7 @@ class Operations(object):
         """
         update_sets = _require_param('cards', kwargs)
         for props in update_sets:
-            card = _require_record('id', props, db_session, Card)
+            _require_record('id', props, db_session, Card)
 
             # ensure no immutable props included in props, should contain 'id'
             protected_props = [p.key for p in Card.protected_properties()
@@ -88,7 +87,6 @@ class Operations(object):
                                               param_name=intersecting)
 
             db_session.merge(Card(**props))
-
 
     @staticmethod
     def do_noop(db_session, **kwargs):
