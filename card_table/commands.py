@@ -4,6 +4,7 @@ import random
 import falcon
 
 import card_table.cards as cards
+from card_table import validate_properties
 from card_table.storage import Card, Stack
 
 RANDOM = random.SystemRandom()
@@ -76,15 +77,7 @@ class Operations(object):
         update_sets = _require_param('cards', kwargs)
         for props in update_sets:
             _require_record('id', props, db_session, Card)
-
-            # ensure no immutable props included in props, should contain 'id'
-            protected_props = [p.key for p in Card.protected_properties()
-                               if p.key != 'id']
-            intersecting = set(props.keys()) & set(protected_props)
-            if intersecting:
-                raise falcon.HTTPInvalidParam(msg="One or more properties are "
-                                                  "not modifiable.",
-                                              param_name=intersecting)
+            validate_properties(Card, props, exceptions=['id'])
 
             db_session.merge(Card(**props))
 

@@ -4,7 +4,7 @@ import falcon
 
 from falcon_autocrud.resource import CollectionResource, SingleResource
 
-from card_table import commands
+from card_table import commands, validate_properties
 from card_table.storage import db_verifier, Game, Stack, Card, Command
 
 
@@ -84,25 +84,12 @@ class Protected(object):
 
     def before_patch(self, req, resp, db_session, resource, *args, **kwargs):
         """ Common handling of protected / immutable properties """
-        frozen_props = self._protected_props() + self._immutable_props()
-        for forbidden in frozen_props:
-            if forbidden in req.context['doc']:
-                raise falcon.HTTPInvalidParam(msg=self.IMMUTABLE_PROPERTY,
-                                              param_name=forbidden)
+        validate_properties(type(resource), req.context['doc'])
 
     def before_post(self, req, resp, db_session, resource, *args, **kwargs):
         """ Common handling of protected properties """
-        for forbidden in self._protected_props():
-            if forbidden in req.context['doc']:
-                raise falcon.HTTPInvalidParam(msg=self.IMMUTABLE_PROPERTY,
-                                              param_name=forbidden)
-
-    def _protected_props(self):
-        """ Enumerates read-only properties """
-        return [p.name for p in self.model.protected_properties()]
-
-    def _immutable_props(self):
-        return [p.name for p in self.model.immutable_properties()]
+        validate_properties(type(resource), req.context['doc'],
+                            allow_immutables=True)
 
 
 class RestResource(SingleResource, Protected, ResourceHelper):
