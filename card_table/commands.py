@@ -2,6 +2,7 @@ import json
 import random
 
 import falcon
+#import sqlalchemy.orm.attributes as attributes
 
 import card_table.cards as cards
 from card_table.storage import Card, Stack
@@ -73,8 +74,21 @@ class Operations(object):
         :param db_session: db session to use
         :param kwargs: the command to perform
         """
-        # TODO Implementation
-        pass
+        update_sets = _require_param('cards', kwargs)
+        for props in update_sets:
+            card = _require_record('id', props, db_session, Card)
+
+            # ensure no immutable props included in props, should contain 'id'
+            protected_props = [p.key for p in Card.protected_properties()
+                               if p.key != 'id']
+            intersecting = set(props.keys()) & set(protected_props)
+            if intersecting:
+                raise falcon.HTTPInvalidParam(msg="One or more properties are "
+                                                  "not modifiable.",
+                                              param_name=intersecting)
+
+            db_session.merge(Card(**props))
+
 
     @staticmethod
     def do_noop(db_session, **kwargs):
@@ -118,6 +132,28 @@ class Operations(object):
             raise falcon.HTTPInvalidParam(msg=stack_id, param_name='stack_id')
 
         return stack_id
+
+
+def _require_param(named, data_dict):
+    if named not in data_dict.keys():
+        raise falcon.HTTPMissingParam(param_name=named)
+
+    result = data_dict[named]
+    if not result:
+        raise falcon.HTTPInvalidParam(msg=result,
+                                      param_name=named)
+    return result
+
+
+def _require_record(named, data_dict, session, accessor):
+    record_id = _require_param(named, data_dict)
+
+    record = accessor.get(record_id, session)
+    if not record:
+        raise falcon.HTTPInvalidParam(msg=record_id,
+                                      param_name=named)
+
+    return record
 
 
 def __get_kwargs(command):

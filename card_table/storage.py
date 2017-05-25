@@ -60,6 +60,10 @@ class Card(Base):
     updated_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
 
     @staticmethod
+    def get(record_id, db_session):
+        return db_session.query(__class__).get(record_id)
+
+    @staticmethod
     def find_by_stack(stack_id, db_session):
         return db_session.query(Card).filter(Card.stack_id == stack_id).all()
 
@@ -98,8 +102,8 @@ class Stack(Base):
     size_limit = Column(Integer, nullable=True)
 
     @staticmethod
-    def get(stack_id, db_session):
-        return db_session.query(Stack).get(stack_id)
+    def get(record_id, db_session):
+        return db_session.query(__class__).get(record_id)
 
     @staticmethod
     def protected_properties():

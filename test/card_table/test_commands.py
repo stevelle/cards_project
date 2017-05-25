@@ -141,6 +141,50 @@ class TestShuffleStack(object):
             Operations.do_shuffle_stack(session, **kwargs)
 
 
+class TestMoveCards(object):
+
+    def test_card_reorder(self, session, with_fixtures):
+        kwargs = {"cards": [{"id": 4, "position": 4}]}
+
+        Operations.do_move_cards(session, **kwargs)
+
+    def test_missing_cards(self):
+        session = None
+        kwargs = {}
+
+        with pytest.raises(HTTPBadRequest):
+            Operations.do_move_cards(session, **kwargs)
+
+    def test_empty_cards(self):
+        session = None
+        kwargs = {"cards": []}
+
+        with pytest.raises(HTTPBadRequest):
+            Operations.do_move_cards(session, **kwargs)
+
+    def test_card_missing_id(self):
+        session = None
+        kwargs = {"cards": [{"position": 5}]}
+
+        with pytest.raises(HTTPBadRequest):
+            Operations.do_move_cards(session, **kwargs)
+
+    @patch('card_table.storage.Card.get')
+    def test_card_invalid_id(self, get):
+        session = None
+        kwargs = {"cards": [{"id": 80}]}
+        get.return_value = None
+
+        with pytest.raises(HTTPBadRequest):
+            Operations.do_move_cards(session, **kwargs)
+
+    def test_update_protected_property(self, session, with_fixtures):
+        kwargs = {"cards": [{"id": 4, "updated_at": "2016-09-14T14:25:47Z"}]}
+
+        with pytest.raises(HTTPBadRequest):
+            Operations.do_move_cards(session, **kwargs)
+
+
 def stub_cards():
     from card_table.cards import CLUB, DIAMOND, HEART, KING, SPADE
     from card_table.storage import Card
