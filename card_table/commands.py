@@ -4,7 +4,7 @@ import random
 import falcon
 
 import card_table.cards as cards
-from card_table import validate_properties
+from card_table.common import require_param, require_record, ensure_modifiable
 from card_table.storage import Card, Stack
 
 RANDOM = random.SystemRandom()
@@ -49,7 +49,7 @@ class Operations(object):
         :param kwargs: the command to perform
         :return a new deck of cards
         """
-        stack_id = Operations.__require_stack_id(db_session, **kwargs)
+        stack_id = require_record(db_session, Stack, 'stack_id', kwargs)
 
         # default ace low
         ranks = cards.COMMON_RANKS_ACE_LOW
@@ -74,10 +74,14 @@ class Operations(object):
         :param db_session: db session to use
         :param kwargs: the command to perform
         """
-        update_sets = _require_param('cards', kwargs)
+        update_sets = require_param('cards', kwargs)
         for props in update_sets:
-            _require_record('id', props, db_session, Card)
-            validate_properties(Card, props, exceptions=['id'])
+            # also loads Card into db_session for later merge
+            require_record(db_session, Card, 'id', props)
+            ensure_modifiable(Card, props, exceptions=['id'])
+            # not all moves will change stack_id
+            if 'stack_id' in props:
+                require_record(db_session, Stack, 'stack_id', props)
 
             db_session.merge(Card(**props))
 
@@ -98,9 +102,9 @@ class Operations(object):
         :param db_session: db session to use
         :param kwargs: the command to perform
         """
-        stack_id = Operations.__require_stack_id(db_session, **kwargs)
+        stack_id = require_record(db_session, Stack, 'stack_id', kwargs)
         # use a copy of the found cards, for safety, testability
-        card_list = list(Card.find_by_stack(stack_id, db_session))
+        card_list = list(Card.find_by_stack(db_session, stack_id))
         shuffled = 0
 
         while card_list:
@@ -110,41 +114,6 @@ class Operations(object):
             db_session.add(selected)
             shuffled += 1
         # not returning the shuffled stack to prevent leaking secrets
-
-    @staticmethod
-    def __require_stack_id(db_session, **kwargs):
-        try:
-            stack_id = kwargs['stack_id']
-        except KeyError:
-            raise falcon.HTTPMissingParam(param_name='stack_id')
-
-        found_stack = Stack.get(stack_id, db_session)
-        if not found_stack:
-            raise falcon.HTTPInvalidParam(msg=stack_id, param_name='stack_id')
-
-        return stack_id
-
-
-def _require_param(named, data_dict):
-    if named not in data_dict.keys():
-        raise falcon.HTTPMissingParam(param_name=named)
-
-    result = data_dict[named]
-    if not result:
-        raise falcon.HTTPInvalidParam(msg=result,
-                                      param_name=named)
-    return result
-
-
-def _require_record(named, data_dict, session, accessor):
-    record_id = _require_param(named, data_dict)
-
-    record = accessor.get(record_id, session)
-    if not record:
-        raise falcon.HTTPInvalidParam(msg=record_id,
-                                      param_name=named)
-
-    return record
 
 
 def __get_kwargs(command):

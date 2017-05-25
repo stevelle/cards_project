@@ -4,7 +4,8 @@ import falcon
 
 from falcon_autocrud.resource import CollectionResource, SingleResource
 
-from card_table import commands, validate_properties
+from card_table import commands
+from card_table.common import ensure_modifiable
 from card_table.storage import db_verifier, Game, Stack, Card, Command
 
 
@@ -80,12 +81,12 @@ class Protected(object):
 
     def before_patch(self, req, resp, db_session, resource, *args, **kwargs):
         """ Common handling of protected / immutable properties """
-        validate_properties(type(resource), req.context['doc'])
+        ensure_modifiable(type(resource), req.context['doc'])
 
     def before_post(self, req, resp, db_session, resource, *args, **kwargs):
         """ Common handling of protected properties """
-        validate_properties(type(resource), req.context['doc'],
-                            allow_immutables=True)
+        ensure_modifiable(type(resource), req.context['doc'],
+                          allow_immutables=True)
 
 
 class RestCollectionResource(CollectionResource, Protected, ResourceHelper):
