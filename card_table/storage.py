@@ -1,5 +1,6 @@
 import datetime as dt
 import enum
+import json
 
 import logging
 from sqlalchemy.ext.declarative import declarative_base
@@ -30,6 +31,12 @@ class Command(Base):
     @staticmethod
     def immutable_properties():
         return [Command.game_id, Command.actor_id]
+
+    @staticmethod
+    def serialize_specials(item):
+        if 'changes' in item:
+            changes = item['changes'].replace("'", '"')
+            item['changes'] = json.loads(changes)
 
 
 class Facing(enum.Enum):
@@ -74,6 +81,13 @@ class Card(Base):
     @staticmethod
     def immutable_properties():
         return []
+
+    @staticmethod
+    def serialize_specials(thing):
+        if 'owner_facing' in thing:
+            thing['owner_facing'] = thing['owner_facing'].name
+        if 'other_facing' in thing:
+            thing['other_facing'] = thing['other_facing'].name
 
 
 class Stack(Base):
@@ -140,6 +154,11 @@ class Game(Base):
     @staticmethod
     def immutable_properties():
         return []
+
+    @staticmethod
+    def serialize_specials(thing):
+        if 'state' in thing:
+            thing['state'] = thing['state'].name
 
 
 def sync(engine):
