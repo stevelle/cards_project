@@ -117,6 +117,27 @@ class TestApiGame(object):
         assert remaining.status == falcon.HTTP_OK
         assert len(remaining.json) == len(fixtures.games) - 1
 
+    def test_patch_id_forbidden(self, rest_api, with_fixtures):
+        data = {"id": '80'}
+        resp = rest_api.patch('/games/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
+    def test_patch_created_at_forbidden(self, rest_api, with_fixtures):
+        data = {"created_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/games/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
+    def test_patch_updated_at_forbidden(self, rest_api, with_fixtures):
+        data = {"updated_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/games/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
 
 class TestApiStack(object):
     def test_get_all(self, rest_api, with_fixtures):
@@ -148,12 +169,13 @@ class TestApiStack(object):
 
         assert resp.status == falcon.HTTP_NOT_FOUND
 
-    def test_post(self, rest_api):
-        data = {'owner_id': 300, 'label': HAND}
+    def test_post(self, rest_api, with_fixtures):
+        data = {'owner_id': 300, 'label': HAND, 'game_id': 1}
+
         resp = rest_api.post('/stacks', data)
 
         assert resp.status == falcon.HTTP_CREATED
-        assert resp.json['id'] == 1
+        assert resp.json['id'] == len(fixtures.stacks) + 1
         assert resp.json['owner_id'] == 300
         assert resp.json['label'] == HAND
 
@@ -174,6 +196,50 @@ class TestApiStack(object):
         remaining = rest_api.get('/stacks')
         assert remaining.status == falcon.HTTP_OK
         assert len(remaining.json) == len(fixtures.stacks) - 1
+
+    def test_patch_id_forbidden(self, rest_api, with_fixtures):
+        data = {"id": '80'}
+        resp = rest_api.patch('/stacks/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
+    def test_patch_game_id_forbidden(self, rest_api, with_fixtures):
+        data = {"game_id": 5}
+        resp = rest_api.patch('/stacks/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
+    def test_patch_created_at_forbidden(self, rest_api, with_fixtures):
+        data = {"created_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/stacks/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
+    def test_patch_updated_at_forbidden(self, rest_api, with_fixtures):
+        data = {"updated_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/stacks/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
+    def test_post_missing_game_id(self, rest_api, with_fixtures):
+        data = {'owner_id': 300, 'label': HAND}
+
+        resp = rest_api.post('/stacks', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'Missing' in resp.body
+
+    def test_post_invalid_game_id(self, rest_api, with_fixtures):
+        data = {'owner_id': 300, 'label': HAND, 'game_id': 80}
+
+        resp = rest_api.post('/stacks', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'Invalid' in resp.body
 
 
 class TestApiCards(object):
@@ -211,14 +277,14 @@ class TestApiCards(object):
 
         assert resp.status == falcon.HTTP_NOT_FOUND
 
-    def test_post(self, rest_api):
-
+    def test_post(self, rest_api, with_fixtures):
         data = {'stack_id': 1, 'position': 2, 'suit': SPADE,
                 'suit_value': SPADES, 'rank': SIX, 'rank_value': 6}
+
         resp = rest_api.post('/cards', data)
 
         assert resp.status == falcon.HTTP_CREATED
-        assert resp.json['id'] == 1
+        assert resp.json['id'] == len(fixtures.cards) + 1
         assert resp.json['stack_id'] == 1
         assert resp.json['position'] == 2
         assert resp.json['suit'] == SPADE
@@ -244,6 +310,45 @@ class TestApiCards(object):
         remaining = rest_api.get('/cards')
         assert remaining.status == falcon.HTTP_OK
         assert len(remaining.json) == len(fixtures.cards) - 1
+
+    def test_patch_id_forbidden(self, rest_api, with_fixtures):
+        data = {"id": '80'}
+        resp = rest_api.patch('/cards/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
+    def test_patch_created_at_forbidden(self, rest_api, with_fixtures):
+        data = {"created_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/cards/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
+    def test_patch_updated_at_forbidden(self, rest_api, with_fixtures):
+        data = {"updated_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/cards/5', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
+    def test_post_missing_stack(self, rest_api):
+        # no fixtures, so no stacks exist
+        data = {'position': 2, 'suit': SPADE,
+                'suit_value': SPADES, 'rank': SIX, 'rank_value': 6}
+        resp = rest_api.post('/cards', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'Missing' in resp.body
+
+    def test_post_invalid_stack(self, rest_api):
+        # no fixtures, so no stacks exist
+        data = {'stack_id': 1, 'position': 2, 'suit': SPADE,
+                'suit_value': SPADES, 'rank': SIX, 'rank_value': 6}
+        resp = rest_api.post('/cards', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'Invalid' in resp.body
 
 
 class TestApiCommands(object):
@@ -318,12 +423,22 @@ class TestApiCommands(object):
         assert operations.do_create_deck.called_once_with(expected_dict)
 
     @patch('card_table.commands.Operations')
+    def test_post_missing_changes(self, operations, rest_api):
+        data = {'operation': 'noop', 'game_id': 1, 'actor_id': 600,
+                'memo': 'new deck'}
+
+        resp = rest_api.post('/commands', data)
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'Missing' in resp.body
+
+    @patch('card_table.commands.Operations')
     def test_post_invalid_embedded_json(self, operations, rest_api):
         data = {'operation': 'noop', 'game_id': 1, 'actor_id': 600,
                 'changes': '{invalid json', 'memo': 'new deck'}
 
         resp = rest_api.post('/commands', data)
         assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'Invalid' in resp.body
 
     def test_patch_by_id(self, rest_api, with_fixtures):
         data = {'changes': {'foo': 'bar'}}
@@ -341,3 +456,38 @@ class TestApiCommands(object):
         remaining = rest_api.get('/commands')
         assert remaining.status == falcon.HTTP_OK
         assert len(remaining.json) == len(fixtures.commands) - 1
+
+    def test_patch_id_forbidden(self, rest_api, with_fixtures):
+        data = {"id": '80'}
+        resp = rest_api.patch('/commands/3', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
+    def test_patch_game_id_forbidden(self, rest_api, with_fixtures):
+        data = {"game_id": 5}
+        resp = rest_api.patch('/commands/3', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
+    def test_patch_actor_id_forbidden(self, rest_api, with_fixtures):
+        data = {"actor_id": 503}
+        resp = rest_api.patch('/commands/3', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
+    def test_patch_created_at_forbidden(self, rest_api, with_fixtures):
+        data = {"created_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/commands/3', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body
+
+    def test_patch_updated_at_forbidden(self, rest_api, with_fixtures):
+        data = {"updated_at": '2016-8-15T09:45:52Z'}
+        resp = rest_api.patch('/commands/3', data)
+
+        assert resp.status == falcon.HTTP_BAD_REQUEST
+        assert 'not modifiable' in resp.body

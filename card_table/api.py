@@ -5,6 +5,7 @@ import falcon
 from falcon_autocrud.resource import CollectionResource, SingleResource
 
 from card_table import commands
+from card_table.common import ensure_modifiable, require_record
 from card_table.storage import db_verifier, Game, Stack, Card, Command
 
 
@@ -42,146 +43,119 @@ class HealthResource(object):
 
 class ResourceHelper(object):
     """ Helper for Resources to serialize Enum and Dict in responses """
-    ##########
+
+    def after_get(self, req, resp, collection, *args, **kwargs):
+        self._serialize_all_enums(self.model, req.context['result'])
+
+    def after_patch(self, req, resp, *args, **kwargs):
+        self._serialize_all_enums(self.model, req.context['result'])
+
+    def after_post(self, req, resp, new, *args, **kwargs):
+        self._serialize_all_enums(self.model, req.context['result'])
+
     # falcon_autocrud + json.dump doesn't handle Enum types correctly,
     #   this function patches around that issue. [patch submitted]
-    ######
-    @staticmethod
-    def _serialize_all_enums(clasz, target):
-        """ Helper to serialize Enums for each item in target
-
-        :param clasz: a class which implements serialize_enums(item)
-        :param target: where to search for items
-        """
-        data = target['data']
-        if isinstance(data, list):
-            for item in data:
-                clasz.serialize_enums(item)
-        else:
-            clasz.serialize_enums(data)
-
-    ##########
     # transform particular subdicts to strings when inbound, to store as Text
-    ######
     @staticmethod
-    def _serialize_all_dicts(clasz, target):
-        """ Helper to serialize Dicts for each item in target
+    def _serialize_all_enums(model, target):
+        """ Helper to serialize special field types for each item in target
 
-        :param clasz: a class which implements serialize_dicts(item)
+        :param model: a class which implements serialize_specials(item)
         :param target: where to search for items
         """
         data = target['data']
-        if isinstance(data, list):
-            for item in data:
-                clasz.serialize_dicts(item)
-        else:
-            clasz.serialize_dicts(data)
+        try:
+            if isinstance(data, list):
+                for item in data:
+                    model.serialize_specials(item)
+            else:
+                model.serialize_specials(data)
+        except AttributeError:
+            # may not be implemented
+            pass
 
 
-class RestResource(SingleResource, ResourceHelper):
-    """ Convenience class that fixes up behavior of DELETE requests """
+class Protected(object):
+
+    IMMUTABLE_PROPERTY = 'This property is not modifiable.'
+
+    def before_patch(self, req, resp, db_session, resource, *args, **kwargs):
+        """ Common handling of protected / immutable properties """
+        ensure_modifiable(self.model, req.context['doc'])
+
+    def before_post(self, req, resp, db_session, resource, *args, **kwargs):
+        """ Common handling of protected properties """
+        ensure_modifiable(self.model, req.context['doc'],
+                          allow_immutables=True)
+
+
+class RestCollectionResource(CollectionResource, Protected, ResourceHelper):
+    pass
+
+
+class RestResource(SingleResource, Protected, ResourceHelper):
+
     @staticmethod
     def after_delete(req, resp, item, *args, **kwargs):
+        """ Common handler fixes up behavior of DELETE requests """
         resp.status = falcon.HTTP_NO_CONTENT
         req.context['result'] = None
 
 
-class CommandCollectionResource(CollectionResource, ResourceHelper):
+class CommandCollectionResource(RestCollectionResource):
     model = Command
 
-    @staticmethod
-    def before_post(req, resp, db_session, resource, *args, **kwargs):
+    def before_post(self, req, resp, db_session, resource, *args, **kwargs):
+        super(CommandCollectionResource, self).before_post(
+            req, resp, db_session, resource, *args, **kwargs)
+
         commands.execute(db_session, resource)
-
-    def after_get(self, req, resp, new, *args, **kwargs):
-        self._serialize_all_dicts(CommandResource, req.context['result'])
-
-    def after_post(self, req, resp, new, *args, **kwargs):
-        self._serialize_all_dicts(CommandResource, req.context['result'])
 
 
 class CommandResource(RestResource):
     model = Command
 
-    @staticmethod
-    def modify_patch(req, resp, resource, *args, **kwargs):
+    def modify_patch(self, req, resp, resource, *args, **kwargs):
+        super(CommandResource, self).modify_patch(
+            req, resp, resource, *args, **kwargs)
+
         if getattr(resource, 'changes', None):
             resource.changes = json.dumps(resource.changes)
 
-    def after_get(self, req, resp, collection, *args, **kwargs):
-        self._serialize_all_dicts(self.__class__, req.context['result'])
 
-    def after_patch(self, req, resp, *args, **kwargs):
-        self._serialize_all_dicts(self.__class__, req.context['result'])
-
-    @staticmethod
-    def serialize_dicts(item):
-        if 'changes' in item:
-            changes = item['changes'].replace("'", '"')
-            item['changes'] = json.loads(changes)
-
-
-class CardCollectionResource(CollectionResource, ResourceHelper):
+class CardCollectionResource(RestCollectionResource):
     model = Card
 
-    def after_post(self, req, resp, new, *args, **kwargs):
-        self._serialize_all_enums(CardResource, req.context['result'])
+    def before_post(self, req, resp, db_session, resource, *args, **kwargs):
+        super(CardCollectionResource, self).before_post(
+            req, resp, db_session, resource, *args, **kwargs)
 
-    def after_get(self, req, resp, collection, *args, **kwargs):
-        self._serialize_all_enums(CardResource, req.context['result'])
-
-    def after_patch(self, req, resp, *args, **kwargs):
-        self._serialize_all_enums(CardResource, req.context['result'])
+        require_record(db_session, Stack, 'stack_id', req.context['doc'])
 
 
 class CardResource(RestResource):
     model = Card
-
-    def after_get(self, req, resp, collection, *args, **kwargs):
-        self._serialize_all_enums(self.__class__, req.context['result'])
-
-    def after_patch(self, req, resp, *args, **kwargs):
-        self._serialize_all_enums(self.__class__, req.context['result'])
-
-    @staticmethod
-    def serialize_enums(thing):
-        if 'owner_facing' in thing:
-            thing['owner_facing'] = thing['owner_facing'].name
-        if 'other_facing' in thing:
-            thing['other_facing'] = thing['other_facing'].name
+    # TODO validate the card is landing in a valid stack, in the same game?
 
 
-class StackCollectionResource(CollectionResource):
+class StackCollectionResource(RestCollectionResource):
     model = Stack
+
+    def before_post(self, req, resp, db_session, resource, *args, **kwargs):
+        super(StackCollectionResource, self).before_post(
+            req, resp, db_session, resource, *args, **kwargs)
+
+        require_record(db_session, Game, 'game_id', req.context['doc'])
 
 
 class StackResource(RestResource):
     model = Stack
+    # TODO validate the stack is in a valid game?
 
 
-class GameCollectionResource(CollectionResource, ResourceHelper):
+class GameCollectionResource(RestCollectionResource):
     model = Game
-
-    def after_post(self, req, resp, new, *args, **kwargs):
-        self._serialize_all_enums(GameResource, req.context['result'])
-
-    def after_get(self, req, resp, collection, *args, **kwargs):
-        self._serialize_all_enums(GameResource, req.context['result'])
-
-    def after_patch(self, req, resp, *args, **kwargs):
-        self._serialize_all_enums(GameResource, req.context['result'])
 
 
 class GameResource(RestResource):
     model = Game
-
-    def after_get(self, req, resp, collection, *args, **kwargs):
-        self._serialize_all_enums(self.__class__, req.context['result'])
-
-    def after_patch(self, req, resp, *args, **kwargs):
-        self._serialize_all_enums(self.__class__, req.context['result'])
-
-    @staticmethod
-    def serialize_enums(thing):
-        if 'state' in thing:
-            thing['state'] = thing['state'].name

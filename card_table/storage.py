@@ -1,5 +1,6 @@
 import datetime as dt
 import enum
+import json
 
 import logging
 from sqlalchemy.ext.declarative import declarative_base
@@ -20,6 +21,22 @@ class Command(Base):
     """ json blob describing the changes made by the command """
     changes = Column(Text)
     memo = Column(String, nullable=True)
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    updated_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
+
+    @staticmethod
+    def protected_properties():
+        return [Command.id, Command.created_at, Command.updated_at]
+
+    @staticmethod
+    def immutable_properties():
+        return [Command.game_id, Command.actor_id]
+
+    @staticmethod
+    def serialize_specials(item):
+        if 'changes' in item:
+            changes = item['changes'].replace("'", '"')
+            item['changes'] = json.loads(changes)
 
 
 class Facing(enum.Enum):
@@ -46,12 +63,31 @@ class Card(Base):
     rank = Column(String, nullable=True)
     """ Effective sortable rank """
     rank_value = Column(Integer, nullable=True, default=rank)
-    recorded_at = Column(DateTime, default=dt.datetime.utcnow)
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
     updated_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
+
+    @staticmethod
+    def get(record_id, db_session):
+        return db_session.query(Card).get(record_id)
 
     @staticmethod
     def find_by_stack(stack_id, db_session):
         return db_session.query(Card).filter(Card.stack_id == stack_id).all()
+
+    @staticmethod
+    def protected_properties():
+        return [Card.id, Card.created_at, Card.updated_at]
+
+    @staticmethod
+    def immutable_properties():
+        return []
+
+    @staticmethod
+    def serialize_specials(thing):
+        if 'owner_facing' in thing:
+            thing['owner_facing'] = thing['owner_facing'].name
+        if 'other_facing' in thing:
+            thing['other_facing'] = thing['other_facing'].name
 
 
 class Stack(Base):
@@ -62,7 +98,7 @@ class Stack(Base):
     """ owner_id == 0 : a shared stack, such as a shared draw pile """
     owner_id = Column(Integer, index=True)
     label = Column(String, index=True)
-    recorded_at = Column(DateTime, default=dt.datetime.utcnow)
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
     updated_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
     # META-PROPERTIES, for use by a game engine to store state
     """ Indicates maximum visible size of the deck to observers.
@@ -80,8 +116,16 @@ class Stack(Base):
     size_limit = Column(Integer, nullable=True)
 
     @staticmethod
-    def get(stack_id, db_session):
-        return db_session.query(Stack).get(stack_id)
+    def get(record_id, db_session):
+        return db_session.query(Stack).get(record_id)
+
+    @staticmethod
+    def protected_properties():
+        return [Stack.id, Stack.created_at, Stack.updated_at]
+
+    @staticmethod
+    def immutable_properties():
+        return [Stack.game_id]
 
 
 class GameState(enum.Enum):
@@ -102,6 +146,23 @@ class Game(Base):
     state = Column(Enum(GameState), default=GameState.forming)
     created_at = Column(DateTime, default=dt.datetime.utcnow)
     updated_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
+
+    @staticmethod
+    def get(record_id, db_session):
+        return db_session.query(Game).get(record_id)
+
+    @staticmethod
+    def protected_properties():
+        return [Game.id, Game.created_at, Game.updated_at]
+
+    @staticmethod
+    def immutable_properties():
+        return []
+
+    @staticmethod
+    def serialize_specials(thing):
+        if 'state' in thing:
+            thing['state'] = thing['state'].name
 
 
 def sync(engine):

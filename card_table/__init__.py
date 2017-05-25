@@ -1,6 +1,7 @@
 import logging
 
 # PoC: debug logging
+
 log_level = logging.DEBUG
 
 logging.basicConfig(
