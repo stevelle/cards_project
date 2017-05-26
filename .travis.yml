@@ -16,7 +16,7 @@ install:
 
 script:
   - 'flake8 --ignore=F403 .'
-  - 'py.tests tests'
+  - 'py.tests --cov=card_table tests/'
 
 matrix:
   include:
