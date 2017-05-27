@@ -2,13 +2,13 @@ import falcon
 import pytest
 from falcon_autocrud.middleware import Middleware
 from mock import patch
+from tests.unit.card_table import FakeClient
 
+import tests.unit.card_table.fixtures as fixtures
 from card_table import api, HAND, IN_PLAY
-from card_table.commands import MOVE_CARDS, NOOP
 from card_table.cards import DIAMONDS, SPADES, SIX, SPADE
+from card_table.commands import MOVE_CARDS, NOOP
 from card_table.storage import Facing
-from test.card_table import FakeClient
-import test.card_table.fixtures as fixtures
 
 
 @pytest.fixture()
