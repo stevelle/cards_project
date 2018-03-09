@@ -1,6 +1,5 @@
 import falcon
 import pytest
-from falcon_autocrud.middleware import Middleware
 from mock import patch
 from tests.unit.card_table import FakeClient
 
@@ -12,8 +11,8 @@ from card_table.storage import Facing
 
 
 @pytest.fixture()
-def app(engine):
-    test_app = api.create_api([Middleware()], engine)
+def app(middleware, engine):
+    test_app = api.create_api(middleware, engine)
     return test_app
 
 

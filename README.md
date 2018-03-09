@@ -30,8 +30,14 @@ related plugins are featured.
 
 ## Deploying
 This project is just getting started. There is no deployment support, no model
-chosen, and no tooling provided at this time. 
-   
+chosen, and no appropriate tooling is provided at this time. 
+
+For now the following command will start the card_table service
+
+  `$ gunicorn -b 0.0.0.0:8000 card_table.server`
+
+when working in an environment where the python 3 requirements have been met.
+
 ## Contributing
 I thank you for your interest, but contributions are not invited at this time.
 

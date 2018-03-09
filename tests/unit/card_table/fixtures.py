@@ -1,10 +1,9 @@
 import json
 
 import pytest
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from card_table import storage, HAND, DRAW_PILE, DISCARDS, IN_PLAY
+from card_table import server, storage, HAND, DRAW_PILE, DISCARDS, IN_PLAY
 from card_table.cards import ACE, EIGHT, FOUR, JACK, NINE, QUEEN, TEN, HEART
 from card_table.cards import DIAMOND, DIAMONDS, HEARTS, SPADES
 from card_table.commands import MOVE_CARDS, NOOP
@@ -71,9 +70,12 @@ commands = [{'operation': MOVE_CARDS, 'game_id': 2, 'actor_id': 700,
 
 @pytest.fixture
 def engine():
-    test_engine = test_db_engine()
-    storage.sync(test_engine)
-    return test_engine
+    return server.engine()
+
+
+@pytest.fixture
+def middleware():
+    return server.middleware()
 
 
 @pytest.fixture
@@ -103,9 +105,3 @@ def with_fixtures(session):
         session.add(storage.Command(**model))
 
     session.commit()
-
-
-def test_db_engine():
-    db_engine = create_engine("sqlite:///:memory:")
-    storage.sync(db_engine)
-    return db_engine
