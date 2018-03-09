@@ -32,11 +32,20 @@ related plugins are featured.
 This project is just getting started. There is no deployment support, no model
 chosen, and no appropriate tooling is provided at this time. 
 
+### Local execution
 For now the following command will start the card_table service
 
   `$ gunicorn -b 0.0.0.0:8000 card_table.server`
 
 when working in an environment where the python 3 requirements have been met.
+
+### Docker execution
+Build the container
+`docker build . -t card_deck`
+
+Run the container
+`docker run -d -p 8000:8000 card_deck`
+
 
 ## Contributing
 I thank you for your interest, but contributions are not invited at this time.
