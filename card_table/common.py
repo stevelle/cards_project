@@ -72,3 +72,13 @@ def require_record(session, accessor, named, data_dict):
                                       param_name=named)
 
     return record
+
+
+def ensure_integer(named, value, minimum=None, maximum=None):
+    if value == int(value):
+        if not minimum or value >= minimum:
+            if not maximum or value <= maximum:
+                return
+
+    raise falcon.HTTPInvalidParam(msg=value,
+                                  param_name=named)

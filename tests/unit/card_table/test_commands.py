@@ -59,6 +59,22 @@ class TestCreateDeck(object):
         assert kings[0].rank_value == 13
 
     @patch('sqlalchemy.orm.Session')
+    def test_two_decks(self, session):
+        kwargs = {'stack_id': 1, 'decks': 2}
+
+        deck = Operations.do_create_deck(session, **kwargs)
+
+        assert session.query.get.called_once_with(1)
+        assert len(deck) == 104
+        assert session.addall.called_with(deck)
+        aces = [c for c in deck if c.rank == 'ace']
+        assert len(aces) == 8
+        assert aces[0].rank_value == 1
+        kings = [c for c in deck if c.rank == 'king']
+        assert len(kings) == 8
+        assert kings[0].rank_value == 13
+
+    @patch('sqlalchemy.orm.Session')
     def test_deck_ace_high(self, session):
         kwargs = {'stack_id': 1, 'ace': 'high'}
 
@@ -86,6 +102,13 @@ class TestCreateDeck(object):
     def test_deck_missing_stack_id(self):
         session = None
         kwargs = {}
+
+        with pytest.raises(HTTPBadRequest):
+            Operations.do_create_deck(session, **kwargs)
+
+    def test_zero_decks(self):
+        session = None
+        kwargs = {'decks': 0}
 
         with pytest.raises(HTTPBadRequest):
             Operations.do_create_deck(session, **kwargs)

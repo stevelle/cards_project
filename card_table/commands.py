@@ -4,7 +4,8 @@ import random
 import falcon
 
 import card_table.cards as cards
-from card_table.common import require_param, require_record, ensure_modifiable
+from card_table.common import (ensure_integer, ensure_modifiable,
+                               require_param, require_record)
 from card_table.storage import Card, Stack
 
 RANDOM = random.SystemRandom()
@@ -50,6 +51,8 @@ class Operations(object):
         :return a new deck of cards
         """
         stack_id = require_record(db_session, Stack, 'stack_id', kwargs)
+        if 'decks' in kwargs:
+            ensure_integer('decks', kwargs['decks'], minimum=1)
 
         # default ace low
         ranks = cards.COMMON_RANKS_ACE_LOW
@@ -57,15 +60,16 @@ class Operations(object):
             if kwargs['ace'] == 'high':
                 ranks = cards.COMMON_RANKS_ACE_HIGH
 
-        deck = []
-        for suit, suit_value in cards.COMMON_SUITS.items():
-            for rank, rank_value in ranks.items():
-                card = Card(stack_id=stack_id, position=len(deck), suit=suit,
-                            suit_value=suit_value, rank=rank,
-                            rank_value=rank_value)
-                deck.append(card)
-        db_session.add_all(deck)
-        return deck
+        stack = []
+        for deck in range(0, kwargs.get('decks', 1)):
+            for suit, suit_value in cards.COMMON_SUITS.items():
+                for rank, rank_value in ranks.items():
+                    card = Card(stack_id=stack_id, position=len(stack),
+                                suit=suit, suit_value=suit_value, rank=rank,
+                                rank_value=rank_value)
+                    stack.append(card)
+        db_session.add_all(stack)
+        return stack
 
     @staticmethod
     def do_move_cards(db_session, **kwargs):
